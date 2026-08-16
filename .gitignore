@@ -19,6 +19,11 @@ backend/**/*.class
 # ========== 敏感配置 ==========
 backend/src/main/resources/application-local.yml
 
+# ========== VSCode ==========
+frontend/.vscode/
+backend/.vscode/
+.vscode/
+
 # ========== OS ==========
 .DS_Store
 Thumbs.db
