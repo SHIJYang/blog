@@ -1,0 +1,60 @@
+# 生产/测试数据库配置（不含真实密码，仅结构参考）
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    # url、username、password 请在 application-local.yml 中配置
+
+jwt:
+  expiration: 604800
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      id-type: auto
+      logic-delete-field: isDeleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+pagehelper:
+  helper-dialect: mysql
+  reasonable: true
+  support-methods-arguments: true
+  params: count=countSql
+
+# Agnes AI 配置（API Key 在后台管理系统配置，此处不硬编码）
+agnes:
+  api:
+    chat-url: https://api.agnes-ai.cn/v1/chat/completions
+    embedding-url: https://api.siliconflow.cn/v1/embeddings
+    embedding-model: BAAI/bge-m3
+    chat-model: agnes-2.5-flash
+
+# 记忆照片存储配置
+memory:
+  upload-dir: uploads/memory
+  access-prefix: /uploads/memory
+  image-quality: 0.85
+  max-context-messages: 20
+  recall-top-k: 3
+  rate-limit-per-minute: 10
+  auto-condense-idle-minutes: 2
+  auto-condense-max-per-round: 5
+
+# 向量检索配置
+embedding:
+  dimension: 1024
+  min-score: 0.35
+
+server:
+  port: 8080
+  servlet:
+    context-path: /
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html

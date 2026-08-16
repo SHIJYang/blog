@@ -1,0 +1,24 @@
+# Blog 项目根目录 .gitignore
+# 管理 frontend/ 和 backend/ 两个子项目，忽略无关目录和生成文件
+
+# ========== 无关目录 ==========
+Geeker-Admin/
+koi-ui/
+tt/
+
+# ========== node_modules ==========
+node_modules/
+frontend/node_modules/
+frontend/dist/
+
+# ========== Java build ==========
+backend/target/
+backend/**/*.jar
+backend/**/*.class
+
+# ========== 敏感配置 ==========
+backend/src/main/resources/application-local.yml
+
+# ========== OS ==========
+.DS_Store
+Thumbs.db

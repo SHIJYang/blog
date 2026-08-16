@@ -1,0 +1,35 @@
+node_modules/
+dist/
+dist-ssr/
+coverage/
+*.local
+.env
+.env.*
+!.env.example
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.tsbuildinfo
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Cache
+.eslintcache
+
+# Build artifacts
+*.timestamp-*-*.mjs
