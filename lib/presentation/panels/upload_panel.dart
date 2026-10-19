@@ -9,22 +9,16 @@ import '../components/error_banner.dart';
 class UploadPanel extends StatelessWidget {
   const UploadPanel({
     super.key,
-    required this.dragging,
     required this.busy,
     required this.onPick,
-    required this.onDragEnter,
-    required this.onDragLeave,
-    required this.onDragDone,
+    required this.onFilesDropped,
     this.error,
     this.onDismissError,
   });
 
-  final bool dragging;
   final bool busy;
   final VoidCallback onPick;
-  final VoidCallback onDragEnter;
-  final VoidCallback onDragLeave;
-  final ValueChanged<List<DropItem>> onDragDone;
+  final ValueChanged<List<DropItem>> onFilesDropped;
   final String? error;
   final VoidCallback? onDismissError;
 
@@ -41,12 +35,9 @@ class UploadPanel extends StatelessWidget {
         ],
         Expanded(
           child: DropArea(
-            dragging: dragging,
             busy: busy,
             onPick: onPick,
-            onDragEnter: onDragEnter,
-            onDragLeave: onDragLeave,
-            onDragDone: onDragDone,
+            onFilesDropped: onFilesDropped,
           ),
         ),
       ],

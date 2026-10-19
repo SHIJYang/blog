@@ -1,5 +1,6 @@
 #include "flutter_window.h"
 
+#include <ole2.h>
 #include <optional>
 
 #include "flutter/generated_plugin_registrant.h"
@@ -27,13 +28,21 @@ bool FlutterWindow::OnCreate() {
   RegisterPlugins(flutter_controller_->engine());
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
-  // Fallback file drop target: desktop_drop may fail to resolve the view
-  // handle and never call RegisterDragDrop, which leaves file drops dead.
-  // When the plugin already registered one, Register() fails and we step aside.
+  // The desktop_drop plugin registers a drop target but never sets
+  // *pdwEffect, which makes Explorer treat the drop as unsupported (no copy
+  // cursor and no Drop callback). Take over the registration with our own
+  // IDropTarget that reports DROPEFFECT_COPY; the Dart side keeps listening on
+  // the same channel.
+  HWND view_window = flutter_controller_->view()->GetNativeWindow();
   drop_target_ = std::make_unique<FileDropTarget>(
       flutter_controller_->engine()->messenger());
-  if (!drop_target_->Register(flutter_controller_->view()->GetNativeWindow())) {
-    drop_target_.reset();
+  if (!drop_target_->Register(view_window)) {
+    // Another drop target (usually the plugin's) owns the window: release it
+    // and install ours.
+    ::RevokeDragDrop(view_window);
+    if (!drop_target_->Register(view_window)) {
+      drop_target_.reset();
+    }
   }
 
   flutter_controller_->engine()->SetNextFrameCallback([&]() {

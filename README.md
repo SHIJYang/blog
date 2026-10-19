@@ -59,6 +59,22 @@ lib/
 滚动只发生在内容区：预览区 `MarkdownWidget` 自带滚动，外层不再套
 `SingleChildScrollView`（否则会出现"垂直视图高度无界"的布局异常）。
 
+## 文件拖放（Windows）
+
+`desktop_drop` 在 Windows 上调用 `RegisterDragDrop` 时既不初始化 OLE、也不设置
+`*pdwEffect`，资源管理器因此认为该窗口不接受拖放：没有复制光标，松手也不会
+投递 `Drop`。这里做了两处修正：
+
+- runner 自带 `IDropTarget`（`windows/runner/file_drop_target.*`）：启动时若窗口
+  已被插件注册则先 `RevokeDragDrop` 再换成自己的实现，明确返回
+  `DROPEFFECT_COPY`，并按 `entered / updated / exited / performOperation`
+  转发给 Dart；
+- Dart 侧 `DropArea` 直接订阅底层拖放事件（`addRawDropEventListener`），不再依赖
+  插件内部「进入事件必须先按坐标命中边界」的状态机，松手即处理。
+
+`main.cpp` 里同时补了 `OleInitialize`（只调用 `CoInitializeEx` 不足以启用 OLE
+拖放），并在 `CMakeLists.txt` 链接 `ole32.lib`。
+
 ## 登录信息保存在本机
 
 - 登录成功后 token / 用户名 / 角色写入 `shared_preferences`

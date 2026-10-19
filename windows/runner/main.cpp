@@ -1,6 +1,5 @@
 #include <flutter/dart_project.h>
 #include <flutter/flutter_view_controller.h>
-#include <cstdio>
 #include <ole2.h>
 #include <windows.h>
 

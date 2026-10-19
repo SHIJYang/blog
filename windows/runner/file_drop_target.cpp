@@ -42,18 +42,6 @@ bool FileDropTarget::Register(HWND window) {
     return false;
   }
   const HRESULT result = ::RegisterDragDrop(window, this);
-  {
-    wchar_t temp[MAX_PATH] = {};
-    ::GetTempPathW(MAX_PATH, temp);
-    std::wstring path = std::wstring(temp) + L"dsh-drop-probe.txt";
-    FILE* fp = nullptr;
-    if (::_wfopen_s(&fp, path.c_str(), L"a") == 0 && fp != nullptr) {
-      std::fprintf(fp, "RegisterDragDrop hwnd=%p hr=0x%08lX\n",
-                   reinterpret_cast<void*>(window),
-                   static_cast<unsigned long>(result));
-      std::fclose(fp);
-    }
-  }
   if (FAILED(result)) {
     // DRAGDROP_E_ALREADYREGISTERED means the plugin already owns this window.
     return false;

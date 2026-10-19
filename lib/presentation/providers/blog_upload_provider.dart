@@ -32,7 +32,6 @@ class BlogUploadProvider extends ChangeNotifier {
   }) : _lastUsername = initialUsername;
 
   UploadStage _stage = UploadStage.restoring;
-  bool _isDragging = false;
   bool _isLoading = false;
   bool _rememberMe = true;
   bool _disposed = false;
@@ -52,7 +51,6 @@ class BlogUploadProvider extends ChangeNotifier {
 
   // ---------- Getter ----------
   UploadStage get stage => _stage;
-  bool get isDragging => _isDragging;
   bool get isLoading => _isLoading;
   bool get isSubmitting => _stage == UploadStage.submitting;
   bool get rememberMe => _rememberMe;
@@ -128,25 +126,9 @@ class BlogUploadProvider extends ChangeNotifier {
     _notify();
   }
 
-  // ---------- 拖拽 ----------
-  void onDragEntered() {
-    if (_isDragging) return;
-    _isDragging = true;
-    _notify();
-  }
-
-  void onDragExited() {
-    if (!_isDragging) return;
-    _isDragging = false;
-    _notify();
-  }
-
+  // ---------- 拖入文件 ----------
   Future<void> onFilesDropped(List<DropItem> files) async {
-    _isDragging = false;
-    if (files.isEmpty) {
-      _notify();
-      return;
-    }
+    if (files.isEmpty) return;
     final item = files.first;
     try {
       final bytes = await item.readAsBytes();
@@ -284,7 +266,6 @@ class BlogUploadProvider extends ChangeNotifier {
     summaryController.clear();
     _status = ArticleStatus.published;
     _allowComment = true;
-    _isDragging = false;
     _error = null;
   }
 

@@ -176,12 +176,9 @@ class _BlogUploadPageState extends State<BlogUploadPage> {
         onSubmit: _provider.login,
       ),
       UploadStage.drop => UploadPanel(
-        dragging: _provider.isDragging,
         busy: _provider.isLoading,
         onPick: _provider.pickFile,
-        onDragEnter: _provider.onDragEntered,
-        onDragLeave: _provider.onDragExited,
-        onDragDone: _provider.onFilesDropped,
+        onFilesDropped: _provider.onFilesDropped,
         error: _provider.error,
         onDismissError: _provider.clearError,
       ),
