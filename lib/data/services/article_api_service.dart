@@ -1,3 +1,4 @@
+import '../../core/constants/api_constants.dart';
 import '../models/api_result.dart';
 import '../models/article_save_request.dart';
 import 'api_client.dart';
@@ -8,6 +9,6 @@ class ArticleApiService {
 
   /// 调用 POST /api/admin/articles
   Future<ApiResult<void>> save(ArticleSaveRequest request) {
-    return _client.post<void>('/api/admin/articles', request.toJson());
+    return _client.post<void>(ApiConstants.adminArticles, request.toJson());
   }
 }

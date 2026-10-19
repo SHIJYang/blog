@@ -1,5 +1,7 @@
 #include <flutter/dart_project.h>
 #include <flutter/flutter_view_controller.h>
+#include <cstdio>
+#include <ole2.h>
 #include <windows.h>
 
 #include "flutter_window.h"
@@ -17,6 +19,12 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   // plugins.
   ::CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
 
+  // File drag & drop (desktop_drop calls RegisterDragDrop) needs OLE to be
+  // initialized on this thread. With CoInitializeEx alone the registration
+  // fails silently, which shows up as "dropping a file does nothing".
+  const HRESULT ole_result = ::OleInitialize(nullptr);
+  const bool ole_initialized = SUCCEEDED(ole_result);
+
   flutter::DartProject project(L"data");
 
   std::vector<std::string> command_line_arguments =
@@ -26,8 +34,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
 
   FlutterWindow window(project);
   Win32Window::Point origin(10, 10);
-  Win32Window::Size size(1280, 720);
-  if (!window.Create(L"flutter_application_1", origin, size)) {
+  Win32Window::Size size(1200, 820);
+  if (!window.Create(L"Markdown \u53d1\u5e03\u5668", origin, size)) {
     return EXIT_FAILURE;
   }
   window.SetQuitOnClose(true);
@@ -38,6 +46,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
     ::DispatchMessage(&msg);
   }
 
+  if (ole_initialized) {
+    ::OleUninitialize();
+  }
   ::CoUninitialize();
   return EXIT_SUCCESS;
 }

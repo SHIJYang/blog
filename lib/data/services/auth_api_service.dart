@@ -1,3 +1,4 @@
+import '../../core/constants/api_constants.dart';
 import '../../domain/entities/auth_session.dart';
 import '../models/api_result.dart';
 import '../models/login_request.dart';
@@ -12,9 +13,7 @@ class AuthApiService {
   Future<ApiResult<AuthSession>> login(String username, String password) async {
     final body = LoginRequest(username: username, password: password).toJson();
 
-    final result = await _client.post<AuthSession>('/api/auth/login', body, (
-      data,
-    ) {
+    return _client.post<AuthSession>(ApiConstants.login, body, (data) {
       final map = Map<String, dynamic>.from(data as Map);
       // 兼容常见字段名：token / accessToken / jwt
       final token =
@@ -32,12 +31,8 @@ class AuthApiService {
         role: map['role']?.toString(),
       );
     });
-
-    if (result.isSuccess && result.data != null) {
-      _client.setToken(result.data!.token);
-    }
-    return result;
   }
 
-  void logout() => _client.clearToken();
+  /// 把会话（或 null）应用到 HTTP 客户端，后续请求自动带上 Bearer Token。
+  void applySession(AuthSession? session) => _client.setToken(session?.token);
 }

@@ -27,6 +27,15 @@ bool FlutterWindow::OnCreate() {
   RegisterPlugins(flutter_controller_->engine());
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
+  // Fallback file drop target: desktop_drop may fail to resolve the view
+  // handle and never call RegisterDragDrop, which leaves file drops dead.
+  // When the plugin already registered one, Register() fails and we step aside.
+  drop_target_ = std::make_unique<FileDropTarget>(
+      flutter_controller_->engine()->messenger());
+  if (!drop_target_->Register(flutter_controller_->view()->GetNativeWindow())) {
+    drop_target_.reset();
+  }
+
   flutter_controller_->engine()->SetNextFrameCallback([&]() {
     this->Show();
   });
@@ -40,6 +49,10 @@ bool FlutterWindow::OnCreate() {
 }
 
 void FlutterWindow::OnDestroy() {
+  if (drop_target_) {
+    drop_target_->Unregister();
+    drop_target_.reset();
+  }
   if (flutter_controller_) {
     flutter_controller_ = nullptr;
   }
