@@ -3,7 +3,8 @@ import { ElMessage } from 'element-plus'
 import router from '@/router'
 
 const request = axios.create({
-  baseURL: '/api',
+  // 开发/生产均由环境变量提供，未配置时回退 /api（与旧行为一致）
+  baseURL: import.meta.env.VITE_API_BASE || '/api',
   timeout: 10000
 })
 

@@ -1,0 +1,57 @@
+# 博客前台 SPA 生产部署 Nginx 配置示例
+# 用法：按需修改 server_name / root / 后端地址后，放入 /etc/nginx/conf.d/ 或 include，
+#       执行 nginx -t && nginx -s reload 生效。
+
+server {
+    listen 80;
+    server_name example.com;        # TODO: 改为实际域名或服务器 IP
+
+    # vite build 产物目录（dist/）
+    root /var/www/blog/dist;
+    index index.html;
+
+    # 后台上传等场景放宽请求体限制
+    client_max_body_size 20m;
+
+    # 动态 gzip 兜底：预压缩 .gz 缺失或插件弃用时仍可压缩传输
+    gzip on;
+    gzip_comp_level 6;
+    gzip_min_length 1k;
+    gzip_types text/plain text/css application/javascript application/json image/svg+xml;
+    gzip_vary on;
+
+    # 优先返回 vite-plugin-compression2 预压缩生成的 .gz（需 nginx 编译
+    # --with-http_gzip_static_module；若 reload 报 unknown directive，删除本行即可）
+    gzip_static on;
+
+    # index.html 不缓存，保证发版后立即生效
+    location = /index.html {
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
+    }
+
+    # assetsDir 下文件带内容 hash，可长缓存（immutable）
+    location /assets/ {
+        add_header Cache-Control "public, max-age=2592000, immutable";
+        try_files $uri =404;
+    }
+
+    # /api 反代到后端；proxy_pass 不带末尾 URI，/api 前缀原样保留
+    # （若写成 proxy_pass http://118.190.133.231:32658/; 带斜杠会丢掉 /api 前缀导致 404）
+    location /api/ {
+        proxy_pass http://118.190.133.231:32658;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        # 如后端需要 WebSocket / SSE，取消下面三行注释
+        # proxy_http_version 1.1;
+        # proxy_set_header Upgrade $http_upgrade;
+        # proxy_set_header Connection "upgrade";
+    }
+
+    # SPA history 模式：未命中文件的路由（含 /admin/* 深链接）全部交给 index.html
+    location / {
+        add_header Cache-Control "no-cache";
+        try_files $uri $uri/ /index.html;
+    }
+}
