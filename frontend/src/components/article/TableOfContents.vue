@@ -6,7 +6,7 @@
     </div>
     <ul class="toc-list">
       <li v-for="(h, i) in headings" :key="i" :class="['toc-item', `level-${h.level}`, { active: activeId === h.id }]">
-        <a :href="`#${h.id}`" @click.prevent="scrollTo(h.id)">{{ h.text }}</a>
+        <a :href="`#${h.id}`" :title="h.text" @click.prevent="scrollTo(h.id)">{{ h.text }}</a>
       </li>
     </ul>
     <div class="toc-rail">
@@ -91,13 +91,16 @@ onUnmounted(() => {
 
 .toc-item a {
   display: block;
-  padding: 4px 14px;
+  padding: 5px 14px;
   font-size: 12px;
-  line-height: 1.5;
+  line-height: 1.45;
   color: var(--text-muted);
   border-left: 2px solid transparent;
   margin-left: -1px;
-  transition: all 0.2s;
+  transition: color 0.2s, border-color 0.2s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 
   &:hover {
     color: var(--text-secondary);

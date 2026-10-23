@@ -68,7 +68,7 @@ function estimateReadTime(html) {
 /* 标题 */
 .header-title {
   font-family: var(--font-display, serif);
-  font-size: clamp(2.4rem, 5vw, 3.6rem);
+  font-size: clamp(2.2rem, 4.6vw, 3.3rem);
   font-weight: 500;
   line-height: 1.15;
   color: var(--text-primary);
@@ -183,7 +183,7 @@ function estimateReadTime(html) {
   }
 
   .header-title {
-    font-size: clamp(2rem, 7vw, 2.8rem);
+    font-size: clamp(1.95rem, 6.6vw, 2.6rem);
   }
 }
 </style>

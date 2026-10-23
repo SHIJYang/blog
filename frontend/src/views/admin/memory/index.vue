@@ -117,7 +117,7 @@
         <!-- 发布状态 -->
         <el-table-column label="文章" width="110" align="center">
           <template #default="scope">
-            <el-link v-if="scope.row.publishedArticleId" type="success" :underline="false"
+            <el-link v-if="scope.row.publishedArticleId" type="success" underline="never"
               @click="openArticle(scope.row.publishedArticleId)">
               已发布
             </el-link>

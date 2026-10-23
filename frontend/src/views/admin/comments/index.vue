@@ -28,7 +28,7 @@
       <el-table-column prop="id" label="ID" width="80" align="center" />
       <el-table-column prop="nickname" label="昵称" width="120" show-overflow-tooltip />
       <el-table-column prop="email" label="邮箱" width="150" show-overflow-tooltip />
-      <el-table-column prop="website" label="网址" width="150" show-overflow-tooltip />
+      <el-table-column prop="articleId" label="文章ID" width="150" show-overflow-tooltip />
       <el-table-column prop="content" label="评论正文" min-width="250" show-overflow-tooltip />
 
       <el-table-column label="状态" width="100" align="center">

@@ -8,7 +8,11 @@
       </div>
       <div class="ci-body">
         <div class="ci-head">
-          <span class="ci-author">{{ comment.nickname }}</span>
+          <span class="ci-author">
+            <a v-if="comment.website" :href="comment.website" target="_blank"
+              rel="noopener nofollow noreferrer">{{ comment.nickname || '匿名网友' }}</a>
+            <template v-else>{{ comment.nickname || '匿名网友' }}</template>
+          </span>
           <span class="ci-time">{{ relativeTime(comment.createTime) }}</span>
         </div>
         <p class="ci-text">{{ comment.content }}</p>
@@ -26,22 +30,22 @@
 
         <!-- 内联回复表单 -->
         <Transition name="rf">
-          <CommentForm v-if="showReply" :placeholder="`回复 ${comment.nickname}...`" compact @submit="onReplySubmit"
-            @cancel="showReply = false" />
+          <CommentForm v-if="showReply" :placeholder="`回复 ${comment.nickname || '匿名网友'}…`" compact
+            :loading="replying" @submit="onReplySubmit" @cancel="showReply = false" />
         </Transition>
       </div>
     </div>
 
     <!-- 子回复：字段改为 replies -->
-    <div class="ci-children" v-if="comment.replies?.length">
-      <CommentItem v-for="child in comment.replies" :key="child.id" :comment="child" :depth="depth + 1"
+    <div class="ci-children" v-if="replies.length">
+      <CommentItem v-for="child in replies" :key="child.id" :comment="child" :depth="depth + 1"
         @reply="p => emit('reply', p)" />
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { Heart, Reply as ReplyIcon } from 'lucide-vue-next'
 import CommentForm from './CommentForm.vue'
 
@@ -53,18 +57,31 @@ const props = defineProps({
 const emit = defineEmits(['reply'])
 const liked = ref(false)
 const showReply = ref(false)
+const replying = ref(false)
+
+/** 后端可能用 replies / children 任一种字段承载子评论 */
+const replies = computed(() => props.comment.replies || props.comment.children || [])
 
 function onReplySubmit(data) {
-  // 将父评论 id 和表单数据向上传递
-  emit('reply', { parentId: props.comment.id, data })
-  showReply.value = false
+  replying.value = true
+  // 把父评论 id、表单数据和一个收尾回调交给父组件，提交成功才收起表单
+  emit('reply', {
+    parentId: props.comment.id,
+    data,
+    finish: (ok) => {
+      replying.value = false
+      if (ok) showReply.value = false
+    }
+  })
 }
 
 function relativeTime(d) {
   if (!d) return ''
-  const diff = Date.now() - new Date(d).getTime()
+  const time = new Date(d).getTime()
+  if (Number.isNaN(time)) return ''
+  const diff = Date.now() - time
   const m = Math.floor(diff / 60000)
-  if (m < 1) return '刚刚'
+  if (diff < 60000) return '刚刚'
   if (m < 60) return `${m} 分钟前`
   const h = Math.floor(m / 60)
   if (h < 24) return `${h} 小时前`
@@ -133,6 +150,17 @@ function relativeTime(d) {
   font-size: 13px;
   font-weight: 600;
   color: var(--text-primary);
+
+  a {
+    color: inherit;
+    border-bottom: 1px solid transparent;
+    transition: color 0.2s, border-color 0.2s;
+
+    &:hover {
+      color: var(--accent-strong);
+      border-color: var(--accent-medium);
+    }
+  }
 }
 
 .ci-time {
@@ -144,9 +172,9 @@ function relativeTime(d) {
 .ci-text {
   font-size: 0.92rem;
   line-height: 1.75;
-  color: var(--text-primary);
-  opacity: 0.85;
+  color: var(--text-secondary);
   word-break: break-word;
+  white-space: pre-wrap;
 }
 
 .ci-actions {
@@ -160,6 +188,7 @@ function relativeTime(d) {
   align-items: center;
   gap: 4px;
   padding: 3px 10px;
+  background: transparent;
   font-family: var(--font-mono);
   font-size: 11px;
   color: var(--text-muted);
