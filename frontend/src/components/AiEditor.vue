@@ -32,7 +32,7 @@ let aiEditor = null
 
 const AGNES_API_KEY = import.meta.env.VITE_AGNES_API_KEY || 'sk-gnwF7Jzc7ETWgLzTp73Xf0KrnCGPlPnPvEsMl56gweMWdoc7'
 const AGNES_ENDPOINT = 'https://apihub.agnes-ai.com/v1/chat/completions'
-const AGNES_MODEL = 'agnes-2.0-flash'
+const AGNES_MODEL = 'agnes-3.0-flash'
 
 onMounted(() => {
   aiEditor = new AiEditor({
