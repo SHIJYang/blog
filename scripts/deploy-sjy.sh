@@ -116,12 +116,18 @@ GIT_OPTS=(-c http.version=HTTP/1.1
 
 # git_try <git 子命令...>：带指数退避重试，输出统一写日志
 git_try() {
-    local attempt=1 wait_s=$FETCH_SLEEP
+    local attempt=1 wait_s=$FETCH_SLEEP mark
+    mark=$(wc -l <"$LOG_FILE" 2>/dev/null || echo 0)
     while :; do
         if git "${GIT_OPTS[@]}" "$@" >>"$LOG_FILE" 2>&1; then
             return 0
         fi
         if [ "$attempt" -ge "$FETCH_ATTEMPTS" ]; then
+            # 把本轮 git 的真实报错回显到控制台。参数写错和网络不通在日志里
+            # 长得一样，但一个能立刻修、一个只能等，必须让人当场看见。
+            say "git $1 失败，本轮输出末尾："
+            tail -n +$((mark + 1)) "$LOG_FILE" 2>/dev/null | grep -v '^$' | tail -n 5 \
+                | while IFS= read -r line; do say "  | $line"; done
             return 1
         fi
         log "git $1 第 $attempt/$FETCH_ATTEMPTS 次失败，${wait_s}s 后重试"
@@ -238,7 +244,9 @@ fi
 # ------------------------------ 首次克隆 ------------------------------
 FRESH_CLONE=0
 DEPTH_OPT=()
-[ "$REPO_DEPTH" -gt 0 ] && DEPTH_OPT=(--depth "$REPO_DEPTH" --single-branch)
+# 只有 --depth 是 clone/fetch 通用；--single-branch 是 clone 专属，
+# 传给 fetch 会直接 "error: unknown option `single-branch'"（踩过）
+[ "$REPO_DEPTH" -gt 0 ] && DEPTH_OPT=(--depth "$REPO_DEPTH")
 
 if [ ! -d "$SRC_DIR/.git" ]; then
     case "$SRC_DIR" in
@@ -254,7 +262,7 @@ if [ ! -d "$SRC_DIR/.git" ]; then
     USED_URL=""
     for u in "${CLONE_URLS[@]}"; do
         rm -rf "$SRC_DIR"          # 清掉上一轮失败留下的半成品，避免“目录非空”报错
-        if git_try clone ${DEPTH_OPT[@]+"${DEPTH_OPT[@]}"} --branch "$BRANCH" "$u" "$SRC_DIR"; then
+        if git_try clone ${DEPTH_OPT[@]+"${DEPTH_OPT[@]}"} --single-branch --branch "$BRANCH" "$u" "$SRC_DIR"; then
             USED_URL="$u"
             say "克隆成功：$u"
             break
