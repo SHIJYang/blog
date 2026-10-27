@@ -1,0 +1,11 @@
+# Blog Backend (.gitignore for backend/)
+target/
+*.jar
+*.war
+*.class
+.idea/
+.vscode/
+*.iml
+*.log
+.env*
+application-local.yml
