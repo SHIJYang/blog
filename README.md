@@ -5,12 +5,13 @@
 | 目录 | 是什么 | 技术栈 | 状态 |
 |---|---|---|---|
 | `frontend/` | **公开创作端**（博客前台 + 管理后台） | Vue 3.5 · Vite 8 · Element Plus · Pinia | 在跑 |
-| `backend/` | **统一底座**（博客 + 拾光 + 念生 同一个 Spring Boot） | Java 21 · Spring Boot 4.0.6 · MyBatis-Plus · PostgreSQL 16 | 在跑（库待切） |
+| `backend/` | **统一底座**（博客 + 拾光 + 念生 同一个 Spring Boot） | Java 21 · Spring Boot 4.0.6 · MyBatis-Plus · PostgreSQL 17 | 在跑（本地 PG / 生产 Supabase PG） |
 | `apps/addtoblog/` | **Markdown 发布器**（桌面端，拖文件发博客） | Flutter | 可用，独立演进 |
 | `archive/android-memory/` | 旧 Android 客户端（已下线，仅存档参考） | Kotlin + ViewBinding | **只读，不改** |
 
 ```
 docs/                        架构与调研文档（先看这里）
+├── status-and-roadmap.md              ← 现在到哪了、接下来做什么（含实测证据与验收标准）
 ├── upgrade-research-report.md        升级调研与实施方案（决策 D1~D16、风险、路线）
 ├── product/shiguang-product-spec.md  拾光碎念产品定位（原 frontend/kaifa.txt）
 ├── design/linear-style.md            视觉风格约定（原 frontend/DESIGN_LINEAR.md）
@@ -50,7 +51,7 @@ docs/                        架构与调研文档（先看这里）
 ## 本地启动
 
 ```bash
-# 1) 起数据库（PostgreSQL 16 + pgvector）
+# 1) 起数据库（PostgreSQL 17 + pgvector）
 docker compose up -d
 
 # 2) 后端（需 JDK 21；Flyway 启动时建表）
