@@ -1,0 +1,29 @@
+# 本地配置模板 —— 复制为 application-local.yml 后填入真实值
+# application-local.yml 已被 .gitignore 排除，不会进仓库
+#   cp application-local.yml.example application-local.yml
+
+spring:
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://localhost:5432/blog
+    username: blog
+    password: blog
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    # V1 是全量基线，库里本来没有 flyway_schema_history，直接建
+    baseline-on-migrate: false
+
+jwt:
+  # 必须替换：随便一串 64 位以上随机字符
+  secret: CHANGE_ME_TO_A_RANDOM_SECRET_AT_LEAST_64_CHARS________________
+
+# 仅在调试 SQL 时打开，生产务必注释
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+# 记忆照片：本地受控目录（新写入的私密照片不允许走公网图床）
+memory:
+  upload-dir: uploads/memory
+  access-prefix: /uploads/memory
