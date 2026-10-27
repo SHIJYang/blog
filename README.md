@@ -73,6 +73,24 @@ flutter pub get && flutter run -d windows
 
 ---
 
+## 部署（仅前端）
+
+服务器上的自动发布脚本在 `scripts/deploy-sjy.sh`，随仓库版本管理——改了脚本不用再手工 scp 到服务器，
+下次部署会用它自己的新版（脚本会把自己复制到 `/var/lib/deploy-sjy/` 再执行，避免被 `git reset` 覆盖）。
+
+```bash
+# 服务器上首次放置（之后随仓库自动更新）
+mkdir -p /www/git/blog/scripts
+curl -fsSL https://raw.githubusercontent.com/SHIJYang/blog/main/scripts/deploy-sjy.sh \
+     -o /www/git/blog/scripts/deploy-sjy.sh
+
+# 计划任务里
+bash /www/git/blog/scripts/deploy-sjy.sh
+```
+
+它按 `frontend/` 子树的 hash 判断是否需要重建，所以**改后端或文档不会触发前端重新构建**。
+后端上线不归这个脚本管。细节见脚本头部注释（`--help` 可看参数）。
+
 ## 分支约定
 
 - **`main` 是唯一开发分支**，前后端同树，一次提交可同时改接口和页面。
