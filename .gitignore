@@ -10,7 +10,7 @@ tt/
 node_modules/
 frontend/node_modules/
 frontend/dist/
-
+frontend/dist-tmp/
 # ========== Java build ==========
 backend/target/
 backend/**/*.jar
