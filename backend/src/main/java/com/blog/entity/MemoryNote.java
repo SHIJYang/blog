@@ -1,6 +1,7 @@
 package com.blog.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
+import com.blog.config.typehandler.PgTextArrayTypeHandler;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -10,7 +11,7 @@ import java.time.LocalDateTime;
  * 对应一条「照片 + 对话 + 日记」的完整记忆单元
  */
 @Data
-@TableName("memory_note")
+@TableName(value = "memory_note", autoResultMap = true)
 public class MemoryNote {
 
     /** 状态：未开始 */
@@ -45,6 +46,8 @@ public class MemoryNote {
 
     private LocalDateTime createTime;
 
+    /** PG 没有 ON UPDATE CURRENT_TIMESTAMP，由 MetaObjectHandler 自动回填 */
+    @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
 
     /** 记忆凝聚完成时间 */
@@ -56,7 +59,8 @@ public class MemoryNote {
     /** 记忆隐私等级：0-公开 1-私密 2-封存（默认私密） */
     private Integer privacy;
 
-    /** 本记忆聚合的情绪标签（逗号分隔，AI 自由生成） */
+    /** 本记忆聚合的情绪标签（V1 是 text[]，Java 侧仍是逗号串，靠 TypeHandler 双向转换） */
+    @TableField(typeHandler = PgTextArrayTypeHandler.class)
     private String emotions;
 
     /** 软删除 */

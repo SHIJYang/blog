@@ -3,7 +3,6 @@ package com.blog.controller.admin;
 import com.blog.common.Result;
 import com.blog.entity.AiProvider;
 import com.blog.service.ai.AiProviderService;
-import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -27,10 +26,8 @@ public class AiProviderController {
 
     private final AiProviderService aiProviderService;
 
-    @PostConstruct
-    public void init() {
-        aiProviderService.ensureDefaults();
-    }
+    // 默认供应商的初始化不放在这里：@PostConstruct 与 Flyway 谁先跑没有保证，
+    // 空库首启会先查 ai_provider 然后炸掉。已移到 config/StartupTasksConfig 的 ApplicationRunner。
 
     /** 查询全部供应商 */
     @GetMapping

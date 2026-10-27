@@ -311,9 +311,10 @@ public class MemoryQueryService {
      * 情绪标签统计（管理员查全部聚合；普通用户查自己）
      */
     public List<Map<String, Object>> listEmotionStats(Long currentUserId, Long targetUserId) {
+        // emotions 是 text[]：不能写 .ne(x, "")（text[] 与 varchar 比较 PG 会直接报错），
+        // 空数组在下面的 isBlank 判断里过滤
         LambdaQueryWrapper<MemoryNote> wrapper = new LambdaQueryWrapper<MemoryNote>()
-                .isNotNull(MemoryNote::getEmotions)
-                .ne(MemoryNote::getEmotions, "");
+                .isNotNull(MemoryNote::getEmotions);
         Long scope = resolveQueryUserId(currentUserId, targetUserId);
         if (scope != null) {
             wrapper.eq(MemoryNote::getUserId, scope);

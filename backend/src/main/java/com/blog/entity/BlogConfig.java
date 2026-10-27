@@ -24,6 +24,8 @@ public class BlogConfig {
 
     private LocalDateTime createTime;
 
+    /** PG 没有 ON UPDATE CURRENT_TIMESTAMP，由 MetaObjectHandler 自动回填 */
+    @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
 
     // 在设置 configValue 时，自动进行 HTML 清洗

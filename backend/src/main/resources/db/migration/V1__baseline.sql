@@ -1,5 +1,5 @@
 -- ============================================================
--- V1__baseline.sql · PostgreSQL 16 + pgvector
+-- V1__baseline.sql · PostgreSQL 17 + pgvector（本地 docker 与生产 Supabase 同为 17）
 -- SHIJYang/blog 统一底座（博客公开端 + 拾光碎念 + 念生）
 -- ============================================================
 -- 生成时间：2026-10-27
@@ -266,7 +266,9 @@ CREATE TABLE memory_embedding (
   text_snippet varchar(1024) NOT NULL DEFAULT '',
   privacy     smallint    NOT NULL DEFAULT 1,   -- 快照，隐私变更时同步
   emotion     varchar(32),
-  embedding   vector(1024) NOT NULL,
+  -- 允许 NULL：Embedding 服务不可用时只存摘要（关键词降级召回仍可用），
+  -- HNSW 索引天然跳过 NULL，语义召回不会把这些行当候选。
+  embedding   vector(1024),
   create_time timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT uk_emb_user_memory UNIQUE (user_id, memory_id)
 );

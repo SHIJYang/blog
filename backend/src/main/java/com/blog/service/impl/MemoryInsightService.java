@@ -93,16 +93,22 @@ public class MemoryInsightService {
         insight.setContent(text);
         insight.setSource(MemoryInsight.SOURCE_USER);
         insight.setCreateTime(LocalDateTime.now());
+        String embedding = null;
         try {
             float[] vec = agnesAiClient.embed(text);
             if (vec != null && vec.length > 0) {
-                insight.setVectorJson(VectorUtil.toJson(VectorUtil.normalize(vec)));
+                embedding = VectorUtil.toJson(VectorUtil.normalize(vec));
             }
         } catch (Exception e) {
             log.warn("闪光点向量化失败: {}", e.getMessage());
         }
-        memoryInsightMapper.insert(insight);
-        log.info("用户添加闪光点: userId={}, memoryId={}, id={}", userId, memoryId, insight.getId());
+        // 向量列不进实体，写入必须走带 ::vector 转型的专用 SQL
+        if (embedding != null) {
+            memoryInsightMapper.insertWithVector(insight, embedding);
+        } else {
+            memoryInsightMapper.insertWithoutVector(insight);
+        }
+        log.info("用户添加闪光点: userId={}, memoryId={}, id={}, 含向量={}", userId, memoryId, insight.getId(), embedding != null);
         return insight;
     }
 
@@ -146,16 +152,21 @@ public class MemoryInsightService {
             insight.setContent(pt.length() > 500 ? pt.substring(0, 500) : pt);
             insight.setSource(MemoryInsight.SOURCE_AI);
             insight.setCreateTime(LocalDateTime.now());
-            // 独立向量化（失败则 vector_json 留空，不影响召回降级到关键词）
+            // 独立向量化（失败则该条只入库无向量，语义召回用不上，列表展示不受影响）
+            String embedding = null;
             try {
                 float[] vec = agnesAiClient.embed(pt);
                 if (vec != null && vec.length > 0) {
-                    insight.setVectorJson(VectorUtil.toJson(VectorUtil.normalize(vec)));
+                    embedding = VectorUtil.toJson(VectorUtil.normalize(vec));
                 }
             } catch (Exception e) {
                 log.warn("闪光点向量化失败: {}", e.getMessage());
             }
-            memoryInsightMapper.insert(insight);
+            if (embedding != null) {
+                memoryInsightMapper.insertWithVector(insight, embedding);
+            } else {
+                memoryInsightMapper.insertWithoutVector(insight);
+            }
             saved.add(insight);
         }
         log.info("闪光点入库完成: userId={}, memoryId={}, 共 {} 条", userId, memoryId, saved.size());

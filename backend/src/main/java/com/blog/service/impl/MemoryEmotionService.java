@@ -126,38 +126,40 @@ public class MemoryEmotionService {
     /**
      * 情绪归并：把该用户的自由情绪标签合并进规范情绪桶（memory_emotion）
      * 固定/定时触发。free 标签会先尝试映射到 CANONICAL 桶；无法归并的保留为独立桶。
+     * <p>
+     * 只维护「规范名 + 别名集合 + 最近出现时间」，**不再累计次数**——
+     * V1 删掉了 count 列，次数由 {@code listEmotionStats} 从 memory_note.emotions 实时聚合。
      */
     @Transactional(rollbackFor = Exception.class)
     public void mergeEmotions(Long userId) {
-        // 取该用户所有记忆的情绪聚合，拆成 (自由标签 → 次数)
+        // 取该用户所有记忆的情绪聚合
+        // 注意：emotions 是 text[]，不能再写 .ne(MemoryNote::getEmotions, "")——
+        // PG 会拿 text[] 去和 varchar 比较直接报错；空数组在下面用 isBlank 过滤
         List<MemoryNote> notes = memoryNoteMapper.selectList(
                 new LambdaQueryWrapper<MemoryNote>()
                         .eq(MemoryNote::getUserId, userId)
-                        .isNotNull(MemoryNote::getEmotions)
-                        .ne(MemoryNote::getEmotions, ""));
-        Map<String, Long> tagCount = new HashMap<>();
+                        .isNotNull(MemoryNote::getEmotions));
+        Set<String> tags = new LinkedHashSet<>();
         for (MemoryNote n : notes) {
             if (StringUtils.isBlank(n.getEmotions())) continue;
             for (String t : n.getEmotions().split(",")) {
                 String tag = t.trim();
-                if (!tag.isEmpty()) tagCount.merge(tag, 1L, Long::sum);
+                if (!tag.isEmpty()) tags.add(tag);
             }
         }
-        if (tagCount.isEmpty()) return;
+        if (tags.isEmpty()) return;
 
-        // 规范桶累计 + 别名映射
-        Map<String, Long> canonicalCount = new HashMap<>();
+        // 归并到规范桶 + 别名映射
+        Set<String> buckets = new LinkedHashSet<>();
         Map<String, List<String>> aliasMap = new HashMap<>();
-        for (Map.Entry<String, Long> e : tagCount.entrySet()) {
-            String tag = e.getKey();
+        for (String tag : tags) {
             String bucket = mapToCanonical(tag);
-            canonicalCount.merge(bucket, e.getValue(), Long::sum);
+            buckets.add(bucket);
             aliasMap.computeIfAbsent(bucket, k -> new ArrayList<>()).add(tag);
         }
 
-        // 写库 upsert
-        for (Map.Entry<String, Long> e : canonicalCount.entrySet()) {
-            String bucket = e.getKey();
+        // 写库 upsert：字典表只负责"规范名 → 别名集合"
+        for (String bucket : buckets) {
             MemoryEmotion existing = memoryEmotionMapper.selectOne(
                     new LambdaQueryWrapper<MemoryEmotion>()
                             .eq(MemoryEmotion::getUserId, userId)
@@ -167,19 +169,17 @@ public class MemoryEmotionService {
                 me.setUserId(userId);
                 me.setEmotion(bucket);
                 me.setAliases(String.join(",", aliasMap.get(bucket)));
-                me.setCount(e.getValue());
                 me.setLastSeenAt(LocalDateTime.now());
                 memoryEmotionMapper.insert(me);
             } else {
                 MemoryEmotion upd = new MemoryEmotion();
                 upd.setId(existing.getId());
-                upd.setCount(existing.getCount() == null ? e.getValue() : existing.getCount() + e.getValue());
                 upd.setLastSeenAt(LocalDateTime.now());
                 upd.setAliases(unionAliases(existing.getAliases(), aliasMap.get(bucket)));
                 memoryEmotionMapper.updateById(upd);
             }
         }
-        log.info("情绪归并完成: userId={}, 桶数={}", userId, canonicalCount.size());
+        log.info("情绪归并完成: userId={}, 桶数={}", userId, buckets.size());
     }
 
     /**

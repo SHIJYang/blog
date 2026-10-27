@@ -18,5 +18,7 @@ public class BlogTag {
 
     private LocalDateTime createTime;
 
+    /** PG 没有 ON UPDATE CURRENT_TIMESTAMP，由 MetaObjectHandler 自动回填 */
+    @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
 }
