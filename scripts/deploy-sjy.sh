@@ -254,7 +254,7 @@ if [ ! -d "$SRC_DIR/.git" ]; then
     USED_URL=""
     for u in "${CLONE_URLS[@]}"; do
         rm -rf "$SRC_DIR"          # 清掉上一轮失败留下的半成品，避免“目录非空”报错
-        if git_try clone "${DEPTH_OPT[@]}" --branch "$BRANCH" "$u" "$SRC_DIR"; then
+        if git_try clone ${DEPTH_OPT[@]+"${DEPTH_OPT[@]}"} --branch "$BRANCH" "$u" "$SRC_DIR"; then
             USED_URL="$u"
             say "克隆成功：$u"
             break
