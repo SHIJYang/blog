@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!-- 金色噪点纸张背景（对话页底层） -->
+    <com.memory.ui.chat.PaperBgView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <!-- 空状态 -->
+    <LinearLayout
+        android:id="@+id/emptyState"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:visibility="gone">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🕊"
+            android:textSize="40sp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="上传一张照片，开始和拾光说话"
+            android:textSize="14sp"
+            android:textColor="@color/text_secondary" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="或从左侧选择一段记忆继续"
+            android:textSize="12sp"
+            android:textColor="@color/text_hint" />
+    </LinearLayout>
+
+    <!-- 对话区 -->
+    <LinearLayout
+        android:id="@+id/chatArea"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <!-- 3D 旋转背景层：居中缩小旋转图片 + 粒子 + 淡遮罩 -->
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <!-- 粒子层（自定义 View 绘制） -->
+            <com.memory.ui.chat.ParticleView
+                android:id="@+id/particleView"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:visibility="gone" />
+
+            <!-- 居中缩小的 3D 旋转图片 -->
+            <ImageView
+                android:id="@+id/bgRotateImage"
+                android:layout_width="200dp"
+                android:layout_height="200dp"
+                android:layout_gravity="center"
+                android:scaleType="centerCrop"
+                android:contentDescription="@null"
+                android:visibility="gone" />
+
+            <!-- 前景内容（聊天消息 + 输入区，浮在粒子云上） -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical">
+
+                <!-- 头部（透明背景） -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:paddingTop="45dp"
+                    android:paddingStart="20dp"
+                    android:paddingEnd="20dp"
+                    android:paddingBottom="20dp">
+
+                    <TextView
+                        android:id="@+id/backBtn"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:padding="6dp"
+                        android:layout_marginEnd="4dp"
+                        android:text="← 返回"
+                        android:textSize="14sp"
+                        android:textColor="@color/primary_dark" />
+
+                    <TextView
+                        android:id="@+id/headerTitle"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:textSize="15sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/text_main"
+                        android:maxLines="1"
+                        android:ellipsize="end" />
+
+                    <TextView
+                        android:id="@+id/publishBtn"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:padding="8dp"
+                        android:text="发布"
+                        android:textSize="13sp"
+                        android:textColor="@color/success" />
+                </LinearLayout>
+
+                <!-- 消息列表（气泡下移，无背景） -->
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/messageList"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:clipToPadding="false"
+                    android:paddingStart="14dp"
+                    android:paddingEnd="14dp"
+                    android:paddingTop="120dp"
+                    android:paddingBottom="20dp" />
+
+                <!-- 输入区（无背景）· 贴底部，减少留白 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="10dp"
+                    android:paddingTop="10dp"
+                    android:paddingBottom="24dp">
+
+                    <!-- 输入行 -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <!-- 发图按钮 -->
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/imgBtn"
+                            style="@style/Widget.Material3.Button.TonalButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="🖼"
+                            android:textSize="14sp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp" />
+
+                        <com.google.android.material.textfield.TextInputLayout
+                            style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="8dp"
+                            android:hint="@string/chat_placeholder"
+                            app:boxCornerRadiusBottomEnd="20dp"
+                            app:boxCornerRadiusBottomStart="20dp"
+                            app:boxCornerRadiusTopEnd="20dp"
+                            app:boxCornerRadiusTopStart="20dp">
+
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/messageInput"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:maxLines="3"
+                                android:inputType="text"
+                                android:imeOptions="actionSend" />
+                        </com.google.android.material.textfield.TextInputLayout>
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/sendBtn"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:text="@string/send"
+                            android:textSize="13sp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp" />
+                    </LinearLayout>
+                </LinearLayout>
+            </LinearLayout>
+        </FrameLayout>
+    </LinearLayout>
+</FrameLayout>

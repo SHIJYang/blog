@@ -1,0 +1,23 @@
+<resources>
+    <string name="app_name">拾光碎念</string>
+    <string name="slogan">把零碎日常酿成专属时光</string>
+    <string name="login_hint">这里是被人温柔收藏的私人时光</string>
+    <string name="login_btn">登录后开始记录</string>
+    <string name="username_hint">账号</string>
+    <string name="password_hint">密码</string>
+    <string name="upload_hint">拖入或点击上传一张照片</string>
+    <string name="upload_sub">拾光会为你记住这一刻</string>
+    <string name="chat_placeholder">说点什么…</string>
+    <string name="captcha_hint">验证码</string>
+    <string name="captcha_free_tip">✓ 10 分钟内无需验证码</string>
+    <string name="search_hint">搜索记忆…</string>
+    <string name="empty_title">还没有被拾光记住的事</string>
+    <string name="empty_tip">用下面的方式，珍藏第一段日常：</string>
+    <string name="guide_1">上传一张照片，拾光会温柔开口</string>
+    <string name="guide_2">和拾光聊几句，静待它替你收进心里</string>
+    <string name="my_memories">拾光记得</string>
+    <string name="collecting">正在收纳这一刻…</string>
+    <string name="ai_thinking">拾光正在温柔回应…</string>
+    <string name="send">发送</string>
+    <string name="send_img">发图</string>
+</resources>

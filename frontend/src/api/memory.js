@@ -2,7 +2,7 @@ import request from '@/utils/request'
 
 /**
  * Memory 记忆管理接口
- * 封装自 api.txt 中 /api/memory/* 端点。
+ * 封装自 docs/legacy/api-2026-08.openapi.json 的 /api/memory/* 端点（该快照已过期，以 springdoc 重新导出为准）。
  */
 
 /** 统计概览 */

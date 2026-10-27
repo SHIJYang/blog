@@ -1,24 +1,55 @@
 # Blog 项目根目录 .gitignore
-# 管理 frontend/ 和 backend/ 两个子项目，忽略无关目录和生成文件
+# 单仓三端：frontend/（Vue 公开端）· backend/（Spring Boot 统一底座）· apps/addtoblog/（Flutter 发布器）
+# archive/ 为已下线代码存档，只读不改
 
 # ========== 无关目录 ==========
 Geeker-Admin/
 koi-ui/
 tt/
 
-# ========== node_modules ==========
+# ========== Node / 前端 ==========
 node_modules/
 frontend/node_modules/
 frontend/dist/
 frontend/dist-tmp/
-# ========== Java build ==========
+*.tsbuildinfo
+
+# ========== Java / 后端 ==========
 backend/target/
-backend/**/*.jar
 backend/**/*.class
+backend/**/*.jar
+
+# ========== Flutter（apps/addtoblog） ==========
+apps/addtoblog/.dart_tool/
+apps/addtoblog/build/
+apps/addtoblog/.flutter-plugins
+apps/addtoblog/.flutter-plugins-dependencies
+apps/addtoblog/android/.gradle/
+apps/addtoblog/android/local.properties
+apps/addtoblog/ios/Pods/
+apps/addtoblog/windows/flutter/ephemeral/
+apps/addtoblog/linux/flutter/ephemeral/
+apps/addtoblog/macos/Flutter/ephemeral/
+
+# ========== 存档的旧 Android（archive/android-memory） ==========
+archive/android-memory/memory/.gradle/
+archive/android-memory/memory/build/
+archive/android-memory/memory/local.properties
+archive/android-memory/memory/app/build/
+# 签名文件与口令绝不入库
+*.jks
+*.keystore
 
 # ========== 敏感配置 ==========
 backend/src/main/resources/application-local.yml
+.env.local
+.env.*.local
 
-# ========== OS ==========
+# ========== 本地工作区（WorkBuddy 记忆/缓存，不共享） ==========
+.workbuddy/
+
+# ========== OS / IDE ==========
 .DS_Store
 Thumbs.db
+.idea/
+*.iml

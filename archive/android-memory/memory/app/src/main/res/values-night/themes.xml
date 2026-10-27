@@ -1,0 +1,17 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- 夜间：保持拾光碎念的温柔，仅压暗背景 -->
+    <style name="Base.Theme.Memory" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/primary</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorPrimaryContainer">@color/primary_dark</item>
+        <item name="colorOnPrimaryContainer">@color/primary_light</item>
+        <item name="colorSecondary">@color/accent</item>
+        <item name="colorSurface">#2B2926</item>
+        <item name="colorOnSurface">#E6E2DA</item>
+        <item name="android:colorBackground">#201E1B</item>
+        <item name="android:windowBackground">#201E1B</item>
+        <item name="android:statusBarColor">#201E1B</item>
+        <item name="android:navigationBarColor">#201E1B</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>

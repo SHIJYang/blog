@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+
+    <!-- 拾光碎念 温柔安静风 -->
+    <color name="bg_page">#FAF7F2</color>
+    <color name="bg_card">#FFFFFF</color>
+    <color name="bg_soft">#F4EFE7</color>
+    <color name="bg_chat_ai">#F1F0EB</color>
+
+    <color name="primary">#7C8DB5</color>
+    <color name="primary_dark">#5C6E9E</color>
+    <color name="primary_light">#E6EAF3</color>
+    <color name="accent">#8FA98B</color>
+
+    <color name="text_main">#3D3A35</color>
+    <color name="text_secondary">#8A8578</color>
+    <color name="text_hint">#B8B2A6</color>
+
+    <color name="divider">#EAE4D8</color>
+    <color name="chip_bg">#F0EBE1</color>
+
+    <color name="success">#7BA05B</color>
+    <color name="warning">#C9A227</color>
+    <color name="danger">#C46A5D</color>
+
+    <color name="ai_bubble">#F1F0EB</color>
+    <color name="me_bubble">#7C8DB5</color>
+</resources>

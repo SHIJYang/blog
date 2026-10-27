@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!-- 金色噪点纸张背景 -->
+    <com.memory.ui.chat.PaperBgView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:background="@android:color/transparent">
+
+        <!-- 顶部栏：拾光碎念 + 退出 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="20dp"
+            android:paddingTop="45dp"
+            android:paddingEnd="8dp"
+            android:paddingBottom="4dp">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/topTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/app_name"
+                    android:textColor="@color/text_main"
+                    android:textSize="20sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/topSub"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/slogan"
+                    android:textColor="@color/text_hint"
+                    android:textSize="11sp" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/logoutBtn"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:padding="12dp"
+                android:text="退出"
+                android:textColor="@color/text_secondary"
+                android:textSize="13sp" />
+        </LinearLayout>
+
+        <!-- 大屏滚动主页：欢迎区居中 -->
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:fillViewport="true"
+            android:scrollbars="none">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="28dp"
+                android:gravity="center_horizontal">
+
+                <!-- 欢迎区 -->
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="520dp"
+                    android:text="把这一刻，交给拾光"
+                    android:textColor="@color/text_main"
+                    android:textSize="26sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="40dp"
+                    android:gravity="center"
+                    android:lineSpacingExtra="6dp"
+                    android:text="拍一张照片，或从相册选一张\n拾光会温柔地替你记住"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="14sp" />
+            </LinearLayout>
+        </ScrollView>
+    </LinearLayout>
+
+    <!-- 底部横向三按钮（纯按钮无面板，触摸放大） -->
+    <com.memory.ui.main.DockView
+        android:id="@+id/dockView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="40dp"
+        android:padding="0dp">
+
+        <!-- 拍照入口：方圆图标（方形外框 + 圆形镜头） -->
+        <ImageView
+            android:id="@+id/cameraBtn"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            android:background="@drawable/bg_btn_outline"
+            app:srcCompat="@drawable/ic_camera_square_circle"
+            android:contentDescription="拍照记录"
+            android:clickable="true"
+            android:focusable="true" />
+
+        <!-- 上传入口：方圆图标（图片框 + 太阳圆） -->
+        <ImageView
+            android:id="@+id/uploadBtn"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            android:layout_marginStart="36dp"
+            android:background="@drawable/bg_btn_outline"
+            app:srcCompat="@drawable/ic_gallery_square_circle"
+            android:contentDescription="从相册上传"
+            android:clickable="true"
+            android:focusable="true" />
+
+        <!-- 查看回忆入口：三横线（汉堡菜单） -->
+        <ImageView
+            android:id="@+id/galleryBtn"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            android:layout_marginStart="36dp"
+            android:background="@drawable/bg_btn_outline"
+            app:srcCompat="@drawable/ic_menu_lines"
+            android:contentDescription="查看回忆"
+            android:clickable="true"
+            android:focusable="true" />
+    </com.memory.ui.main.DockView>
+
+    <!-- 全屏容器：对话页等（主页之上替换显示） -->
+    <FrameLayout
+        android:id="@+id/contentPane"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone" />
+</FrameLayout>

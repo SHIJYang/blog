@@ -1,0 +1,26 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!-- 鐩稿唽鍥炬爣锛氭柟妗?+ 鍐呭渾锛堢収鐗囬噷鐨?澶槼"鏂瑰渾缁勫悎锛?-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="32dp"
+    android:height="32dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- 澶栨柟妗嗭紙鍦嗚鐭╁舰锛屽浘鐗囨锛?-->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#8B6F47"
+        android:strokeWidth="1.6"
+        android:pathData="M4,4 L20,4 A1.5,1.5 0 0 1 21.5,5.5 L21.5,18.5 A1.5,1.5 0 0 1 20,20 L4,20 A1.5,1.5 0 0 1 2.5,18.5 L2.5,5.5 A1.5,1.5 0 0 1 4,4 Z" />
+    <!-- 鍐呭渾锛堝お闃?涓讳綋锛?-->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#8B6F47"
+        android:strokeWidth="1.5"
+        android:pathData="M9,9.5 A2.5,2.5 0 1 1 9,14.5 A2.5,2.5 0 1 1 9,9.5 Z" />
+    <!-- 搴曢儴灞辫剦绾匡紙鐓х墖鎰忓锛?-->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#8B6F47"
+        android:strokeWidth="1.4"
+        android:pathData="M4,17 L9,12.5 L12.5,15.5 L16,11.5 L20.5,16.5" />
+</vector>

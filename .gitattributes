@@ -1,0 +1,21 @@
+# 统一换行，避免 Windows/Linux 来回切换产生整文件 diff
+* text=auto
+
+# 脚本与 SQL 强制 LF（PostgreSQL 客户端与 shell 对 CRLF 敏感）
+*.sql text eol=lf
+*.sh  text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# 二进制，不做换行转换
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.webp binary
+*.ico  binary
+*.jar  binary
+*.jks  binary
+*.keystore binary
+*.ttf  binary
+*.woff binary
+*.woff2 binary
