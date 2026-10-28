@@ -40,6 +40,9 @@ archive/android-memory/memory/app/build/
 *.jks
 *.keystore
 
+# ========== 本地 Android 构建工作区（memory/ 只有产物，无源码） ==========
+/memory/
+
 # ========== 敏感配置 ==========
 backend/src/main/resources/application-local.yml
 .env.local

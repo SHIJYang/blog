@@ -3,8 +3,8 @@ import { ElMessage } from 'element-plus'
 import router from '@/router'
 
 const request = axios.create({
-  // 开发/生产均由环境变量提供，未配置时回退 /api（与旧行为一致）
-  baseURL: import.meta.env.VITE_API_BASE || '/api',
+  // 固定使用相对路径：dev 由 vite proxy 转发到本机 8080，生产由 Nginx 同域反代
+  baseURL: '/api',
   timeout: 10000
 })
 
@@ -15,6 +15,11 @@ request.interceptors.request.use(
     if (token) {
       // 按照后端 JwtAuthenticationTokenFilter 的要求配置请求头
       config.headers['Authorization'] = `Bearer ${token}`
+    }
+    // 封存解锁令牌：5 分钟无操作失效，由后端滑动续期
+    const sealedToken = localStorage.getItem('sealedToken')
+    if (sealedToken) {
+      config.headers['X-Sealed-Token'] = sealedToken
     }
     return config
   },
@@ -37,9 +42,10 @@ request.interceptors.response.use(
     if (res.code === 200) {
       return res.data
     } else {
-      // 处理特定错误，例如：401/403 Token 失效或无权限
-      if (res.code === 401 || res.code === 403) {
+      // 仅 401 视为登录失效；403 是业务拒绝（如封存未解锁、无权访问），不能把用户踢下线
+      if (res.code === 401) {
         localStorage.removeItem('token')
+        localStorage.removeItem('sealedToken')
         router.push('/login')
       }
       ElMessage.error(res.message || '操作失败')

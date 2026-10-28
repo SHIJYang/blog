@@ -23,7 +23,8 @@ export function getMemoryList(query, userId) {
   return request({
     url: '/memory/list',
     method: 'get',
-    params: userId ? { query, userId } : { query }
+    // 后端 MemoryQueryDto 按平铺参数绑定（current / size / status / order），不能包成 query[...]
+    params: { ...query, ...(userId ? { userId } : {}) }
   })
 }
 
@@ -36,7 +37,8 @@ export function searchMemory(dto, userId) {
   return request({
     url: '/memory/search',
     method: 'get',
-    params: userId ? { dto, userId } : { dto }
+    // 同上：MemorySearchDto 走平铺参数绑定
+    params: { ...dto, ...(userId ? { userId } : {}) }
   })
 }
 
@@ -240,5 +242,82 @@ export function mergeMemoryEmotions(userId) {
     url: '/memory/emotion/merge',
     method: 'post',
     params: userId ? { userId } : {}
+  })
+}
+
+// ==================== 封存 PIN（D2/D11） ====================
+
+/** PIN 状态：{ hasPin, locked, lockedUntil, unlocked } */
+export function getMemoryPinStatus() {
+  return request({
+    url: '/memory/pin/status',
+    method: 'get'
+  })
+}
+
+/** 设置 / 重置封存 PIN（4~6 位数字） */
+export function setMemoryPin(pin) {
+  return request({
+    url: '/memory/pin/set',
+    method: 'post',
+    data: { pin }
+  })
+}
+
+/** 校验 PIN，成功返回 { token, expiresIn }（5 分钟无操作失效） */
+export function verifyMemoryPin(pin) {
+  return request({
+    url: '/memory/pin/verify',
+    method: 'post',
+    data: { pin }
+  })
+}
+
+// ==================== 纯文本碎念 / 时光轴 ====================
+
+/**
+ * 写一条纯文本碎念
+ * @param {object} payload { content, title?, emotions?:string[], privacy?:0|1 }
+ */
+export function createMemoryFragment(payload) {
+  return request({
+    url: '/memory/fragment',
+    method: 'post',
+    data: payload
+  })
+}
+
+/** 时光轴：按月聚合 */
+export function getMemoryTimeline(params) {
+  return request({
+    url: '/memory/timeline',
+    method: 'get',
+    params
+  })
+}
+
+/** 那年今日 */
+export function getMemoryOnThisDay(date) {
+  return request({
+    url: '/memory/on-this-day',
+    method: 'get',
+    params: date ? { date } : {}
+  })
+}
+
+// ==================== 公开记忆（D14，未登录可读） ====================
+
+export function getPublicMemories(params) {
+  return request({
+    url: '/public/memories/page',
+    method: 'get',
+    params
+  })
+}
+
+export function getPublicMemoryDetail(id) {
+  return request({
+    url: `/public/memories/${id}`,
+    method: 'get'
   })
 }

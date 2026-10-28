@@ -23,6 +23,13 @@ public class MemoryNote {
     /** 状态：已废弃 */
     public static final int STATUS_ABANDONED = 4;
 
+    /** 类型：照片记忆 */
+    public static final int KIND_PHOTO = 1;
+    /** 类型：纯文本碎念 */
+    public static final int KIND_FRAGMENT = 2;
+    /** 类型：心境随笔 */
+    public static final int KIND_MOOD = 3;
+
     @TableId(type = IdType.AUTO)
     private Long id;
 
@@ -58,6 +65,12 @@ public class MemoryNote {
 
     /** 记忆隐私等级：0-公开 1-私密 2-封存（默认私密） */
     private Integer privacy;
+
+    /** 记忆类型：1-照片 2-纯文本碎念 3-心境随笔 */
+    private Integer kind;
+
+    /** 封存时间：privacy=2 时 V1 的 CHECK 要求非空 */
+    private LocalDateTime sealedAt;
 
     /** 本记忆聚合的情绪标签（V1 是 text[]，Java 侧仍是逗号串，靠 TypeHandler 双向转换） */
     @TableField(typeHandler = PgTextArrayTypeHandler.class)

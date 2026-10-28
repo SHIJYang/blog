@@ -47,17 +47,19 @@ public interface MemoryInsightMapper extends BaseMapper<MemoryInsight> {
      * 已软删的不召回；embedding 为 NULL 的行不在 HNSW 索引里，天然被排除。
      */
     @Select("""
-            SELECT memory_id                          AS memoryId,
-                   content                            AS title,
-                   content                            AS snippet,
-                   emotion,
-                   1 - (embedding <=> #{vec}::vector) AS score,
-                   create_time                        AS createTime
-            FROM memory_insight
-            WHERE user_id = #{userId}
-              AND is_deleted = 0
-              AND embedding IS NOT NULL
-            ORDER BY embedding <=> #{vec}::vector
+            SELECT i.memory_id                       AS memoryId,
+                   i.content                         AS title,
+                   i.content                         AS snippet,
+                   i.emotion,
+                   1 - (i.embedding <=> #{vec}::vector) AS score,
+                   i.create_time                     AS createTime
+            FROM memory_insight i
+            JOIN memory_note n ON n.id = i.memory_id AND n.is_deleted = 0
+            WHERE i.user_id = #{userId}
+              AND i.is_deleted = 0
+              AND n.privacy <> 2
+              AND i.embedding IS NOT NULL
+            ORDER BY i.embedding <=> #{vec}::vector
             LIMIT #{limit}
             """)
     List<VectorHitVo> searchTopK(@Param("userId") Long userId,

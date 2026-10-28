@@ -1,4 +1,3 @@
-# Blog Backend (.gitignore for backend/)
 target/
 *.jar
 *.war
@@ -7,8 +6,6 @@ target/
 .vscode/
 *.iml
 *.log
-.env*
-# 示例文件要入库，真 .env 绝不入库
-!.env.example
+.env
+# 本地私有配置（真实连接串 / JWT secret），严禁提交
 application-local.yml
-!application-local.yml.example

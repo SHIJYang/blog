@@ -97,6 +97,12 @@ const routes = [
         name: 'AdminMemory',
         component: () => import('@/views/admin/memory/index.vue'),
         meta: { title: '记忆管理' }
+      },
+      {
+        path: 'ideas',
+        name: 'AdminIdeas',
+        component: () => import('@/views/admin/ideas/index.vue'),
+        meta: { title: '念生 · 想法' }
       }
     ]
   }

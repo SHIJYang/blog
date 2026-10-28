@@ -31,8 +31,8 @@ service → service/impl → mapper（MyBatis-Plus）→ PostgreSQL
 
 | 环境 | 连哪里 | 怎么配 |
 |---|---|---|
-| 本地开发 | `docker compose up -d`（PG17 + pgvector，库/用户/密码都是 `blog`） | `application-local.yml` |
-| 生产 | Supabase 托管 PostgreSQL 17 | 环境变量 `DB_URL` / `DB_USER` / `DB_PASSWORD`（或 `backend/.env`） |
+| 当前（默认） | Supabase 托管 PostgreSQL 17 | 已写在 `application.yml` 的 `spring.datasource` |
+| 本地备选 | `docker compose up -d`（PG17 + pgvector，库/用户/密码都是 `blog`） | 把 `url` 换成 `jdbc:postgresql://localhost:5432/blog`，用户/密码改 `blog` |
 
 ### Supabase 官方那三步文档，在本项目的落法
 
@@ -42,7 +42,7 @@ service → service/impl → mapper（MyBatis-Plus）→ PostgreSQL
 | 文档步骤 | 本项目 |
 |---|---|
 | 1. `npm install @supabase/server` | **不适用**。Java 侧等价物就一个 JDBC 驱动 `org.postgresql:postgresql`，已加进 pom |
-| 2. 环境变量 | 落成 `backend/.env`（`spring.config.import` 自动读），模板见 `.env.example` |
+| 2. 环境变量 | 不使用。连接串、账号、JWT secret 统一写在 `application.yml` |
 | 3. `npx skills add supabase/server` | **不装**。该 skill 教的是 Node 侧写 API 的姿势，与 Spring Boot 无关 |
 
 `SUPABASE_PUBLISHABLE_KEY` / `SUPABASE_SECRET_KEY` / `SUPABASE_JWKS_URL` 目前**没有代码读取**——
@@ -132,35 +132,28 @@ create extension if not exists pg_trgm with schema extensions;
 
 ## 配置
 
-驱动、Flyway、连接池默认值都在 `application.yml` 里，用环境变量留了口子：
+仓库里的 `application.yml` **只有占位符**，真实连接串与密钥放在本地 `backend/application-local.yml`（已被 `.gitignore` 排除）：
 
 ```yaml
 spring:
   datasource:
-    driver-class-name: org.postgresql.Driver
-    url: ${DB_URL:}          # 故意不给 localhost 兜底
-    username: ${DB_USER:}
-    password: ${DB_PASSWORD:}
-  config:
-    import: optional:file:.env[.properties]   # backend/.env 会被自动读
+    url: jdbc:postgresql://aws-0-ap-northeast-2.pooler.supabase.com:5432/postgres?sslmode=require
+    username: postgres.<project-ref>
+    password: <Database Password>
+jwt:
+  secret: <至少 32 字节的随机串>
 ```
 
-本地开发复制模板（`application-local.yml` 已被 `.gitignore` 排除）：
-
-```bash
-cp src/main/resources/application-local.yml.example src/main/resources/application-local.yml
-```
-
-远程/生产**不要**建 `application-local.yml`，改用 `backend/.env`（模板 `.env.example`）或容器环境变量。
+`application.yml` 通过 `spring.config.import` 自动读取它，从 `backend/` 或仓库根目录启动都能找到。
+本地 docker PG 是备选方案：起容器后把 `url` 换成 `jdbc:postgresql://localhost:5432/blog`，用户/密码改 `blog`。
 
 ---
 
 ## 建库与迁移
 
 ```bash
-# 本地：仓库根目录
-docker compose up -d          # PostgreSQL 17 + pgvector，库名/用户/密码都是 blog
-# 生产：填好 backend/.env 的 DB_URL/DB_USER/DB_PASSWORD，直接启动应用
+# 当前：连接串已写在 application.yml（Supabase），启动应用即可
+# 本地备选：仓库根目录 docker compose up -d（PG17 + pgvector，库名/用户/密码都是 blog）
 
 # 两种情况都是启动时 Flyway 自动执行 V1__baseline.sql，建出 25 张表
 ```

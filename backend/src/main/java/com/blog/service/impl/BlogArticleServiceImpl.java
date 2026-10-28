@@ -29,6 +29,7 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
     private final BlogTagMapper blogTagMapper;
     private final BlogArticleTagMapper blogArticleTagMapper;
     private final SysUserMapper sysUserMapper;
+    private final com.blog.service.MemoryProjectionService projectionService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -91,6 +92,9 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
         }
 
         this.updateById(article);
+
+        // D13：文章一旦人工编辑，记忆后续变更不再覆盖正文（只置 needs_review）
+        projectionService.markManualEdited(article);
 
         // 物理删除老旧关联关系，重新绑定新关系
         blogArticleCategoryMapper.delete(new LambdaQueryWrapper<BlogArticleCategory>()
@@ -203,6 +207,9 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
         vo.setStatus(article.getStatus());
         vo.setViews(article.getViews());
         vo.setAllowComment(article.getAllowComment());
+        vo.setSourceMemoryId(article.getSourceMemoryId());
+        vo.setManualEdited(article.getManualEdited());
+        vo.setNeedsReview(article.getNeedsReview());
         vo.setCreateTime(article.getCreateTime());
         vo.setUpdateTime(article.getUpdateTime());
 

@@ -1,33 +1,37 @@
-# 生产/测试数据库配置（不含真实密码，仅结构参考）
-# 三个值全部来自环境变量，本地开发请用 application-local.yml 覆盖（见该模板）
-# 显式留空而不是给 localhost 兜底：宁可启动即失败，也不允许生产误连到本地库
 spring:
+  # 真实连接串与密钥放本地文件（已被 .gitignore 排除，不进仓库）
+  # 从 backend/ 启动读 ./application-local.yml；从仓库根启动读 ./backend/application-local.yml
+  config:
+    import:
+      - optional:file:./application-local.yml
+      - optional:file:./backend/application-local.yml
   datasource:
     driver-class-name: org.postgresql.Driver
     url: ${DB_URL:}
     username: ${DB_USER:}
     password: ${DB_PASSWORD:}
-    # 实体用 LocalDateTime，而列是 timestamptz：pgjdbc 发送时不带时区，
-    # 由会话时区决定如何落库。Supabase 会话默认 UTC，JVM 默认 +8，
-    # 不统一就会整体偏 8 小时（日记时间轴、create_time 排序全错）。
     hikari:
       connection-init-sql: SET TIME ZONE 'Asia/Shanghai'
-  # 把 backend/.env 当作 properties 读进来（不存在则跳过），这样文档里的 .env 做法在 Java 侧也成立
-  config:
-    import: optional:file:./.env[.properties]
+      maximum-pool-size: 20
+      minimum-idle: 5
+      idle-timeout: 30000
+      max-lifetime: 1800000
+      connection-timeout: 30000
   flyway:
-    enabled: ${FLYWAY_ENABLED:true}
+    enabled: true
     locations: classpath:db/migration
-    # V1 是全量基线；空库直接建，已有 flyway_schema_history 的库不会重复基线
     baseline-on-migrate: false
     validate-on-migrate: true
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 25MB
 
 jwt:
+  secret: ${JWT_SECRET:}
   expiration: 604800
 
 mybatis-plus:
-  # 本包内的 TypeHandler 全局生效：目前只有 timestamptz ↔ LocalDateTime
-  # （pgjdbc 不肯把 timestamptz 直接转 LocalDateTime，MyBatis 自带 handler 会抛异常）
   type-handlers-package: com.blog.config.mybatis
   configuration:
     map-underscore-to-camel-case: true
@@ -39,17 +43,20 @@ mybatis-plus:
       logic-delete-value: 1
       logic-not-delete-value: 0
 
-# 分页统一走 MyBatis-Plus 的 PaginationInnerInterceptor，PageHelper 已移除，这里不留空配置块
+logging:
+  level:
+    com.blog: debug
 
-# Agnes AI 配置（API Key 在后台管理系统配置，此处不硬编码）
 agnes:
   api:
     chat-url: https://api.agnes-ai.cn/v1/chat/completions
     embedding-url: https://api.siliconflow.cn/v1/embeddings
     embedding-model: BAAI/bge-m3
-    chat-model: agnes-2.5-flash
+    chat-model: agnes-3-flash
 
-# 记忆照片存储配置
+picui:
+  api-url: https://picui.cn/api/v1
+
 memory:
   upload-dir: uploads/memory
   access-prefix: /uploads/memory
@@ -60,7 +67,6 @@ memory:
   auto-condense-idle-minutes: 2
   auto-condense-max-per-round: 5
 
-# 向量检索配置
 embedding:
   dimension: 1024
   min-score: 0.35

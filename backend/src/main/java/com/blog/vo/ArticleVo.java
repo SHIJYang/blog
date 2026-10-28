@@ -19,6 +19,12 @@ public class ArticleVo {
     private Integer status;
     private Integer views;
     private Integer allowComment;
+    /** 来源记忆 ID（非空表示这是拾光记忆的投影） */
+    private Long sourceMemoryId;
+    /** 1=人工编辑过 */
+    private Integer manualEdited;
+    /** 1=记忆已改但文章被人工编辑过，待人工合并 */
+    private Integer needsReview;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 

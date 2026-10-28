@@ -8,6 +8,7 @@ import com.blog.dto.MemorySearchDto;
 import com.blog.vo.MemoryDetailVo;
 import com.blog.vo.MemoryListVo;
 import com.blog.vo.MemoryStatVo;
+import com.blog.vo.PublicMemoryVo;
 import com.blog.entity.MemoryEmbedding;
 import com.blog.entity.MemoryMessage;
 import com.blog.entity.MemoryNote;
@@ -26,7 +27,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -46,6 +49,8 @@ public class MemoryQueryService {
     private final MemoryUserStatMapper memoryUserStatMapper;
     private final SysUserMapper sysUserMapper;
     private final MemoryVectorService memoryVectorService;
+    private final MemoryVisibilityService visibilityService;
+    private final com.blog.service.MemoryProjectionService projectionService;
 
     /**
      * 解析查询目标用户范围：
@@ -71,10 +76,8 @@ public class MemoryQueryService {
      */
     public Page<MemoryListVo> pageList(Long currentUserId, Long targetUserId, MemoryQueryDto query) {
         LambdaQueryWrapper<MemoryNote> wrapper = new LambdaQueryWrapper<>();
-        Long scope = resolveQueryUserId(currentUserId, targetUserId);
-        if (scope != null) {
-            wrapper.eq(MemoryNote::getUserId, scope);
-        }
+        // 可见性统一收口：封存默认不可见（解锁后才返回）
+        visibilityService.applyVisibility(wrapper, currentUserId, targetUserId);
         if (query.getStatus() != null) {
             wrapper.eq(MemoryNote::getStatus, query.getStatus());
         }
@@ -96,10 +99,7 @@ public class MemoryQueryService {
         String keyword = StringUtils.trimToNull(dto.getKeyword());
         LambdaQueryWrapper<MemoryNote> wrapper = new LambdaQueryWrapper<MemoryNote>()
                 .orderByDesc(MemoryNote::getCreateTime);
-        Long scope = resolveQueryUserId(currentUserId, targetUserId);
-        if (scope != null) {
-            wrapper.eq(MemoryNote::getUserId, scope);
-        }
+        visibilityService.applyVisibility(wrapper, currentUserId, targetUserId);
         if (keyword != null) {
             List<Object> hitMemoryIds = memoryMessageMapper.selectObjs(
                     new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<MemoryMessage>()
@@ -124,11 +124,8 @@ public class MemoryQueryService {
         if (note == null) {
             throw new BusinessException(404, "记忆不存在");
         }
-        boolean admin = SecurityUtils.isAdmin();
-        // 普通用户只能看自己的；管理员可看任意（含他人）
-        if (!admin && !note.getUserId().equals(currentUserId)) {
-            throw new BusinessException(403, "无权访问该记忆");
-        }
+        // 本人全部可见（封存需解锁）；他人仅 privacy=0；管理员可运维查看（封存仍不可）
+        visibilityService.requireReadable(note, currentUserId);
         List<MemoryMessage> messages = memoryMessageMapper.selectList(
                 new LambdaQueryWrapper<MemoryMessage>()
                         .eq(MemoryMessage::getMemoryId, memoryId)
@@ -152,10 +149,12 @@ public class MemoryQueryService {
         // 管理员查全部：聚合所有用户
         Long totalMemory = memoryNoteMapper.selectCount(
                 new LambdaQueryWrapper<MemoryNote>()
-                        .eq(MemoryNote::getStatus, MemoryNote.STATUS_CONDENSED));
+                        .eq(MemoryNote::getStatus, MemoryNote.STATUS_CONDENSED)
+                        .ne(MemoryNote::getPrivacy, MemoryVisibilityService.PRIVACY_SEALED));
         Long chattingCount = memoryNoteMapper.selectCount(
                 new LambdaQueryWrapper<MemoryNote>()
-                        .in(MemoryNote::getStatus, MemoryNote.STATUS_NOT_STARTED, MemoryNote.STATUS_CHATTING));
+                        .in(MemoryNote::getStatus, MemoryNote.STATUS_NOT_STARTED, MemoryNote.STATUS_CHATTING)
+                        .ne(MemoryNote::getPrivacy, MemoryVisibilityService.PRIVACY_SEALED));
         Long userCount = memoryUserStatMapper.selectCount(null);
         return MemoryStatVo.builder()
                 .continueDays(null)
@@ -172,7 +171,8 @@ public class MemoryQueryService {
         Long chattingCount = memoryNoteMapper.selectCount(
                 new LambdaQueryWrapper<MemoryNote>()
                         .eq(MemoryNote::getUserId, userId)
-                        .in(MemoryNote::getStatus, MemoryNote.STATUS_NOT_STARTED, MemoryNote.STATUS_CHATTING));
+                        .in(MemoryNote::getStatus, MemoryNote.STATUS_NOT_STARTED, MemoryNote.STATUS_CHATTING)
+                        .ne(MemoryNote::getPrivacy, MemoryVisibilityService.PRIVACY_SEALED));
         return MemoryStatVo.builder()
                 .continueDays(stat != null ? stat.getContinueDays() : 0)
                 .totalMemory(stat != null ? stat.getTotalMemory() : 0)
@@ -201,6 +201,8 @@ public class MemoryQueryService {
         memoryEmbeddingMapper.delete(new LambdaQueryWrapper<MemoryEmbedding>()
                 .eq(MemoryEmbedding::getUserId, note.getUserId())
                 .eq(MemoryEmbedding::getMemoryId, memoryId));
+        // 已废弃的记忆必须从博客公开列表下架（投影一致性 I1）
+        projectionService.unpublish(note);
     }
 
     /**
@@ -219,6 +221,8 @@ public class MemoryQueryService {
         if (!admin && !note.getUserId().equals(currentUserId)) {
             throw new BusinessException(403, "无权操作该记忆");
         }
+        // 封存记忆的内容操作需先解锁（改隐私等级不受此限）
+        visibilityService.requireSealedAccess(note);
 
         MemoryNote update = new MemoryNote();
         update.setId(memoryId);
@@ -266,11 +270,16 @@ public class MemoryQueryService {
             }
         }
 
-        return memoryNoteMapper.selectById(memoryId);
+        MemoryNote refreshed = memoryNoteMapper.selectById(memoryId);
+        // D13：记忆是源、文章是投影——改了标题/正文/封面就同步（被人工润色过的只标记待合并）
+        projectionService.syncFromNote(refreshed);
+        return refreshed;
     }
 
     /**
-     * 设置记忆隐私等级（普通用户只能改自己的；管理员可改任意）
+     * 设置记忆隐私等级（普通用户只能改自己的；管理员可改任意）。
+     * <p>
+     * D12：设为公开即投影成博客文章；改回私密/封存立即下架。
      */
     public MemoryNote setPrivacy(Long currentUserId, Long targetUserId, Long memoryId, Integer privacy) {
         MemoryNote note = memoryNoteMapper.selectById(memoryId);
@@ -284,11 +293,20 @@ public class MemoryQueryService {
         if (privacy == null || privacy < 0 || privacy > 2) {
             throw new BusinessException(400, "隐私等级需为 0(公开)/1(私密)/2(封存)");
         }
+        // 离开封存前必须先解锁，否则等于绕过 PIN 直接改可见性
+        if (note.getPrivacy() != null && note.getPrivacy() == MemoryVisibilityService.PRIVACY_SEALED) {
+            visibilityService.requireSealedAccess(note);
+        }
         Long ownerId = note.getUserId();
         MemoryNote update = new MemoryNote();
         update.setId(memoryId);
         update.setPrivacy(privacy);
+        // V1 的 CHECK：privacy=2 必须带 sealed_at
+        if (privacy == MemoryVisibilityService.PRIVACY_SEALED && note.getSealedAt() == null) {
+            update.setSealedAt(LocalDateTime.now());
+        }
         memoryNoteMapper.updateById(update);
+        visibilityService.audit(currentUserId, memoryId, privacy, com.blog.entity.MemoryAccessLog.ACTION_PRIVACY_CHANGE);
 
         try {
             MemoryEmbedding emb = memoryEmbeddingMapper.selectOne(new LambdaQueryWrapper<MemoryEmbedding>()
@@ -304,17 +322,22 @@ public class MemoryQueryService {
             log.warn("同步向量隐私失败: memoryId={}, err={}", memoryId, e.getMessage());
         }
 
-        return memoryNoteMapper.selectById(memoryId);
+        MemoryNote refreshed = memoryNoteMapper.selectById(memoryId);
+        // privacy=0 → 立刻发博客；离开 0 → 立刻下架
+        projectionService.syncFromNote(refreshed);
+        return refreshed;
     }
 
     /**
-     * 情绪标签统计（管理员查全部聚合；普通用户查自己）
+     * 情绪标签统计（管理员查全部聚合；普通用户查自己）。
+     * 封存记忆不参与统计（避免透过统计数字泄露封存内容）。
      */
     public List<Map<String, Object>> listEmotionStats(Long currentUserId, Long targetUserId) {
         // emotions 是 text[]：不能写 .ne(x, "")（text[] 与 varchar 比较 PG 会直接报错），
         // 空数组在下面的 isBlank 判断里过滤
         LambdaQueryWrapper<MemoryNote> wrapper = new LambdaQueryWrapper<MemoryNote>()
-                .isNotNull(MemoryNote::getEmotions);
+                .isNotNull(MemoryNote::getEmotions)
+                .ne(MemoryNote::getPrivacy, MemoryVisibilityService.PRIVACY_SEALED);
         Long scope = resolveQueryUserId(currentUserId, targetUserId);
         if (scope != null) {
             wrapper.eq(MemoryNote::getUserId, scope);
@@ -339,6 +362,122 @@ public class MemoryQueryService {
                 .collect(Collectors.toList());
     }
 
+    // ---------------- 时光轴 / 公开读面 ----------------
+
+    /**
+     * 时光轴：按 finish_time 的年月聚合（封存默认不出现，解锁后才出现）。
+     */
+    public List<Map<String, Object>> timeline(Long currentUserId, Integer year, Integer month) {
+        LambdaQueryWrapper<MemoryNote> wrapper = new LambdaQueryWrapper<MemoryNote>()
+                .isNotNull(MemoryNote::getFinishTime)
+                .orderByDesc(MemoryNote::getFinishTime);
+        visibilityService.applyVisibility(wrapper, currentUserId, null);
+        if (year != null) {
+            wrapper.apply("EXTRACT(YEAR FROM finish_time) = {0}", year);
+        }
+        if (month != null) {
+            wrapper.apply("EXTRACT(MONTH FROM finish_time) = {0}", month);
+        }
+        List<MemoryNote> notes = memoryNoteMapper.selectList(wrapper);
+
+        Map<String, List<MemoryListVo>> grouped = new LinkedHashMap<>();
+        for (MemoryNote n : notes) {
+            YearMonth ym = YearMonth.from(n.getFinishTime());
+            grouped.computeIfAbsent(ym.toString(), k -> new ArrayList<>())
+                    .add(toListVo(n, 0L, null));
+        }
+        List<Map<String, Object>> result = new ArrayList<>();
+        grouped.forEach((ym, items) -> {
+            YearMonth parsed = YearMonth.parse(ym);
+            Map<String, Object> group = new LinkedHashMap<>();
+            group.put("year", parsed.getYear());
+            group.put("month", parsed.getMonthValue());
+            group.put("count", items.size());
+            group.put("memories", items);
+            result.add(group);
+        });
+        return result;
+    }
+
+    /** 「那年今日」：按月-日匹配，跨年份 */
+    public List<MemoryListVo> onThisDay(Long currentUserId, LocalDate day) {
+        LocalDate target = day != null ? day : LocalDate.now();
+        LambdaQueryWrapper<MemoryNote> wrapper = new LambdaQueryWrapper<MemoryNote>()
+                .isNotNull(MemoryNote::getFinishTime)
+                .apply("EXTRACT(MONTH FROM finish_time) = {0}", target.getMonthValue())
+                .apply("EXTRACT(DAY FROM finish_time) = {0}", target.getDayOfMonth())
+                .orderByDesc(MemoryNote::getFinishTime);
+        visibilityService.applyVisibility(wrapper, currentUserId, null);
+        return memoryNoteMapper.selectList(wrapper).stream()
+                .map(n -> toListVo(n, 0L, null))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 公开记忆分页（D14）：未登录可读，只返回昵称/头像，不暴露 user_id 等身份字段。
+     */
+    public Page<PublicMemoryVo> publicPage(int current, int size, Integer year, Integer month, String emotion) {
+        int safeSize = size <= 0 ? 10 : Math.min(size, 50);
+        int pageNo = Math.max(current, 1);
+        long total = memoryNoteMapper.countPublicMemories(year, month, StringUtils.trimToNull(emotion));
+        if (total == 0) {
+            return new Page<>(pageNo, safeSize, 0);
+        }
+        List<Map<String, Object>> rows = memoryNoteMapper.selectPublicMemories(
+                year, month, StringUtils.trimToNull(emotion), safeSize, (pageNo - 1) * safeSize);
+        Page<PublicMemoryVo> page = new Page<>(pageNo, safeSize, total);
+        page.setRecords(toPublicVos(rows));
+        return page;
+    }
+
+    /** 公开记忆详情：只允许 privacy=0 */
+    public PublicMemoryVo publicDetail(Long id) {
+        Map<String, Object> row = memoryNoteMapper.selectPublicMemory(id);
+        if (row == null) {
+            throw new BusinessException(404, "公开记忆不存在");
+        }
+        List<PublicMemoryVo> list = toPublicVos(List.of(row));
+        return list.get(0);
+    }
+
+    private List<PublicMemoryVo> toPublicVos(List<Map<String, Object>> rows) {
+        if (rows == null || rows.isEmpty()) {
+            return new ArrayList<>();
+        }
+        Set<Long> userIds = rows.stream()
+                .map(r -> ((Number) r.get("userId")).longValue())
+                .collect(Collectors.toSet());
+        Map<Long, SysUser> users = sysUserMapper.selectBatchIds(userIds).stream()
+                .collect(Collectors.toMap(SysUser::getId, u -> u));
+        List<PublicMemoryVo> result = new ArrayList<>();
+        for (Map<String, Object> r : rows) {
+            Long uid = ((Number) r.get("userId")).longValue();
+            SysUser u = users.get(uid);
+            result.add(PublicMemoryVo.builder()
+                    .id(((Number) r.get("id")).longValue())
+                    .title((String) r.get("title"))
+                    .diary((String) r.get("diary"))
+                    .coverPhoto((String) r.get("coverPhoto"))
+                    .emotions((String) r.get("emotions"))
+                    .finishTime(toLocalDateTime(r.get("finishTime")))
+                    .createTime(toLocalDateTime(r.get("createTime")))
+                    .authorNickname(u == null ? "匿名" : StringUtils.defaultIfBlank(u.getNickname(), "匿名"))
+                    .authorAvatar(u == null ? null : u.getAvatar())
+                    .build());
+        }
+        return result;
+    }
+
+    private LocalDateTime toLocalDateTime(Object value) {
+        if (value instanceof LocalDateTime dt) {
+            return dt;
+        }
+        if (value instanceof java.sql.Timestamp ts) {
+            return ts.toLocalDateTime();
+        }
+        return null;
+    }
+
     // ---------------- 内部工具 ----------------
 
     private Page<MemoryListVo> toPageVo(Page<MemoryNote> page) {
@@ -352,22 +491,30 @@ public class MemoryQueryService {
         Map<Long, String> userNames = loadUsernames(records);
 
         Page<MemoryListVo> result = new Page<>(page.getCurrent(), page.getSize(), page.getTotal());
-        result.setRecords(records.stream().map(n -> MemoryListVo.builder()
+        result.setRecords(records.stream()
+                .map(n -> toListVo(n, countMap.getOrDefault(n.getId(), 0L), userNames.get(n.getUserId())))
+                .collect(Collectors.toList()));
+        return result;
+    }
+
+    private MemoryListVo toListVo(MemoryNote n, Long messageCount, String username) {
+        return MemoryListVo.builder()
                 .id(n.getId())
                 .userId(n.getUserId())
-                .username(userNames.get(n.getUserId()))
+                .username(username)
                 .coverPhoto(n.getCoverPhoto())
                 .coverThumb(n.getCoverThumb())
                 .autoTitle(n.getAutoTitle())
                 .diaryPreview(DiaryFormatter.preview(n.getFinalDiary(), 80))
                 .status(n.getStatus())
                 .privacy(n.getPrivacy() != null ? n.getPrivacy() : 1)
+                .kind(n.getKind())
+                .sealedAt(n.getSealedAt())
                 .emotions(n.getEmotions())
-                .messageCount(countMap.getOrDefault(n.getId(), 0L))
+                .messageCount(messageCount)
                 .createTime(n.getCreateTime())
                 .finishTime(n.getFinishTime())
-                .build()).collect(Collectors.toList()));
-        return result;
+                .build();
     }
 
     /**

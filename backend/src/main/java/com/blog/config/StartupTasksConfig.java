@@ -24,6 +24,7 @@ import org.springframework.context.annotation.Configuration;
 public class StartupTasksConfig {
 
     private final AiProviderService aiProviderService;
+    private final com.blog.service.impl.IdeaPromptService ideaPromptService;
 
     @Bean
     public ApplicationRunner seedAiProviders() {
@@ -32,6 +33,12 @@ public class StartupTasksConfig {
                 aiProviderService.ensureDefaults();
             } catch (Exception e) {
                 log.warn("初始化默认 AI 供应商失败（不阻断启动）: {}", e.getMessage());
+            }
+            try {
+                // 念生 Prompt 治理：没有激活版本时补内置默认（幂等）
+                ideaPromptService.ensureDefaults();
+            } catch (Exception e) {
+                log.warn("初始化念生默认 Prompt 失败（不阻断启动）: {}", e.getMessage());
             }
         };
     }

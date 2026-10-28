@@ -51,20 +51,17 @@ docs/                        架构与调研文档（先看这里）
 ## 本地启动
 
 ```bash
-# 1) 起数据库（PostgreSQL 17 + pgvector）
-docker compose up -d
-
-# 2) 后端（需 JDK 21；Flyway 启动时建表）
+# 1) 后端（需 JDK 21；连接与密钥统一在 application.yml，Flyway 启动时建表）
 cd backend
-# 复制 application-local.yml 模板并填连接串（该文件已被 .gitignore 排除）
-# IDEA 里运行 BlogApplication
+# IDEA 里运行 BlogApplication（默认 8080，直连 Supabase PG17）
+# 想改用本地库：docker compose up -d，并把 datasource.url 换成 jdbc:postgresql://localhost:5432/blog
 
-# 3) 前端
+# 2) 前端（vite 代理固定指向本机 8080，无 .env 文件）
 cd frontend
 npm install
-npm run dev     # 默认代理远程后端；改 .env.development 的 VITE_API_TARGET 可指向本地 8080
+npm run dev
 
-# 4) 发布器（可选）
+# 3) 发布器（可选）
 cd apps/addtoblog
 flutter pub get && flutter run -d windows
 ```

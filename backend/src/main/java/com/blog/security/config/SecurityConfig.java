@@ -48,7 +48,9 @@ public class SecurityConfig {
                                 "/api/auth/login",
                                 "/api/auth/register",
                                 "/api/public/**",
-                                "/uploads/memory/**",
+                                // 照片由控制器自行鉴权：privacy=0 的照片允许匿名，
+                                // 其余必须本人 token / 封存解锁令牌
+                                "/api/memory/photo/**",
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html"

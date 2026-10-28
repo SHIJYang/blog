@@ -87,6 +87,13 @@
           <span>记忆管理</span>
         </el-menu-item>
 
+        <el-menu-item index="/admin/ideas">
+          <el-icon>
+            <MagicStick />
+          </el-icon>
+          <span>念生 · 想法</span>
+        </el-menu-item>
+
 
       </el-menu>
       <el-button @click="handleLogout">退出登录</el-button>
@@ -117,7 +124,8 @@ import {
   Tools,
   Setting,
   Memo,
-  Platform
+  Platform,
+  MagicStick
 } from '@element-plus/icons-vue'
 
 const router = useRouter()

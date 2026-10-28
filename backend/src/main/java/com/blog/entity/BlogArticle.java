@@ -33,6 +33,18 @@ public class BlogArticle {
      */
     private Integer allowComment;
 
+    /** 来源记忆 ID：非空表示这篇文章是拾光记忆的投影 */
+    private Long sourceMemoryId;
+
+    /** 投影水位：最近一次从记忆同步时的 memory_note.update_time */
+    private LocalDateTime sourceRev;
+
+    /** 1=人工编辑过，记忆再改时不覆盖正文 */
+    private Integer manualEdited;
+
+    /** 1=记忆又改了但文章被人工编辑过，待人工合并 */
+    private Integer needsReview;
+
     @TableLogic
     private Integer isDeleted;
 

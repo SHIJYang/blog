@@ -15,8 +15,9 @@ import java.util.Map;
 @Component
 public class JwtUtils {
 
-    // 默认提供符合 HS256 最低 256bit 长度要求的密钥安全备用
-    @Value("${jwt.secret:abcdefghijklmnopqrstuvwxyz1234567890abcdefghijklmnopqrstuvwxyz1234567890}")
+    // 不给默认值：密钥只允许来自本地 application-local.yml / 环境变量，
+    // 避免仓库里躺着一个"人人可用"的签名密钥
+    @Value("${jwt.secret}")
     private String secret;
 
     @Value("${jwt.expiration:604800}") // 默认 7 天过期，单位秒

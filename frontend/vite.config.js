@@ -1,4 +1,4 @@
-import { defineConfig, loadEnv } from 'vite'
+import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import vueDevTools from 'vite-plugin-vue-devtools'
 import { fileURLToPath, URL } from 'node:url'
@@ -14,11 +14,9 @@ import { compression } from 'vite-plugin-compression2'
 const pathSrc = path.resolve(__dirname, 'src')
 
 export default defineConfig(({ command, mode }) => {
-  // 加载 .env / .env.[mode] 等环境变量；默认只返回 VITE_ 前缀的变量
-  const env = loadEnv(mode, process.cwd())
-
-  // /api 代理目标：默认远程后端，可在 .env.development 覆盖为 http://localhost:8080
-  const apiTarget = env.VITE_API_TARGET || 'http://118.190.133.231:32658'
+  // 不读 .env：前端所有配置集中在本文件与 src/utils/request.js
+  // /api 代理目标固定为本机后端（后端 8080 直连 Supabase）
+  const apiTarget = 'http://localhost:8080'
 
   const isDev = mode === 'development'
   const isBuild = command === 'build' && mode === 'production'
@@ -74,8 +72,7 @@ export default defineConfig(({ command, mode }) => {
           target: apiTarget,
           changeOrigin: true,
         }
-        // 本地后端备选（改 .env.development 的 VITE_API_TARGET 即可切换）：
-        // target: 'http://localhost:8080',
+        // 联调远程时把 apiTarget 改成 http://118.190.133.231:32658
       }
     },
     // npm run preview 本地验证生产构建时使用同款代理

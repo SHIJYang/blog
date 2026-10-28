@@ -64,6 +64,16 @@
           <el-option label="已废弃" :value="4" />
         </el-select>
         <el-button type="primary" :icon="Search" @click="handleSearch">搜索</el-button>
+        <div class="pin-bar">
+          <el-tag v-if="!pinStatus.hasPin" type="info" size="small">未设置封存 PIN</el-tag>
+          <template v-else>
+            <el-tag :type="pinStatus.unlocked ? 'success' : 'warning'" size="small">
+              {{ pinStatus.unlocked ? '封存已解锁' : '封存已锁定' }}
+            </el-tag>
+            <el-button v-if="!pinStatus.unlocked" size="small" link type="primary" @click="openPinVerify">输入 PIN</el-button>
+          </template>
+          <el-button size="small" link @click="openPinSet">{{ pinStatus.hasPin ? '重置 PIN' : '设置 PIN' }}</el-button>
+        </div>
       </div>
     </div>
 
@@ -79,13 +89,16 @@
         </el-table-column>
         <el-table-column label="封面" width="90" align="center">
           <template #default="scope">
-            <el-image v-if="scope.row.coverThumb || scope.row.coverPhoto" :src="scope.row.coverThumb || scope.row.coverPhoto" style="width: 60px; height: 60px; border-radius: 6px;"
+            <el-image v-if="scope.row.coverThumb || scope.row.coverPhoto" :src="photoUrl(scope.row.coverThumb || scope.row.coverPhoto)" style="width: 60px; height: 60px; border-radius: 6px;"
               fit="cover" />
             <span v-else class="text-secondary">无</span>
           </template>
         </el-table-column>
         <el-table-column label="标题" min-width="160" show-overflow-tooltip>
-          <template #default="scope">{{ scope.row.autoTitle || '(未命名)' }}</template>
+          <template #default="scope">
+            <el-tag v-if="scope.row.kind === 2" size="small" type="info" style="margin-right:4px;">碎念</el-tag>
+            {{ scope.row.autoTitle || '(未命名)' }}
+          </template>
         </el-table-column>
         <el-table-column label="日记摘要" min-width="220" show-overflow-tooltip>
           <template #default="scope">{{ scope.row.diaryPreview || '-' }}</template>
@@ -158,7 +171,7 @@
             <p v-if="currentDetail.note?.emotions"><b>情绪：</b>{{ currentDetail.note.emotions }}</p>
             <p><b>创建时间：</b>{{ formatDateTime(currentDetail.note?.createTime) }}</p>
             <p><b>封面：</b>
-              <el-image v-if="currentDetail.note?.coverPhoto" :src="currentDetail.note.coverPhoto" style="width:120px; border-radius:6px;"
+              <el-image v-if="currentDetail.note?.coverPhoto" :src="photoUrl(currentDetail.note.coverPhoto)" style="width:120px; border-radius:6px;"
                 fit="cover" />
               <span v-else>-</span>
             </p>
@@ -172,7 +185,7 @@
           <div v-if="currentDetail.messages?.length" class="detail-section">
             <h4>对话记录（{{ currentDetail.messages.length }}）</h4>
             <div v-for="m in currentDetail.messages" :key="m.id" class="msg-item" :class="'type-' + (m.msgType || 1)">
-              <span v-if="m.imgUrl" class="msg-img"><el-image :src="m.imgUrl" style="max-width:180px; border-radius:6px;" fit="cover" /></span>
+              <span v-if="m.imgUrl" class="msg-img"><el-image :src="photoUrl(m.imgUrl)" style="max-width:180px; border-radius:6px;" fit="cover" /></span>
               <span v-if="m.content" class="msg-text">{{ m.content }}</span>
               <span class="msg-time">{{ formatDateTime(m.createTime) }}</span>
             </div>
@@ -217,9 +230,9 @@
         </el-form-item>
         <el-form-item label="说明">
           <div class="privacy-tip">
-            <p><b>公开</b>：可联动博客、可随意召回。</p>
+            <p><b>公开</b>：<span class="danger-text">立即投影为博客公开文章</span>，所有人可见；改回私密/封存会立即下架。</p>
             <p><b>私密</b>：仅本人可见，AI 正常温柔关联（默认）。</p>
-            <p><b>封存</b>：永久禁止 AI 主动提及，仅存档、不召回，列表/详情仍可见。</p>
+            <p><b>封存</b>：<span class="danger-text">本人也需 PIN 解锁</span>才能查看，AI 永不召回，不参与统计。</p>
           </div>
         </el-form-item>
       </el-form>
@@ -279,6 +292,40 @@
         </div>
       </div>
     </el-dialog>
+    <!-- 设置封存 PIN -->
+    <el-dialog v-model="pinSetVisible" title="设置封存 PIN" width="400px">
+      <p class="tip">4~6 位数字。封存记忆的列表、详情、对话都需要先输入 PIN 解锁。</p>
+      <el-form label-width="90px" style="margin-top:12px;">
+        <el-form-item label="新 PIN">
+          <el-input v-model="pinForm.pin" type="password" maxlength="6" show-password placeholder="4~6 位数字" />
+        </el-form-item>
+        <el-form-item label="确认 PIN">
+          <el-input v-model="pinForm.confirm" type="password" maxlength="6" show-password placeholder="再输入一次" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="pinSetVisible = false">取消</el-button>
+          <el-button type="primary" :loading="pinSaving" @click="handlePinSet">保存</el-button>
+        </span>
+      </template>
+    </el-dialog>
+
+    <!-- 解锁封存 -->
+    <el-dialog v-model="pinVerifyVisible" title="解锁封存记忆" width="380px">
+      <p class="tip">解锁令牌 5 分钟无操作失效，连续错误 5 次锁定 30 分钟。</p>
+      <el-form label-width="70px" style="margin-top:12px;">
+        <el-form-item label="PIN">
+          <el-input v-model="verifyForm.pin" type="password" maxlength="6" show-password placeholder="输入 PIN" @keyup.enter="handlePinVerify" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="pinVerifyVisible = false">取消</el-button>
+          <el-button type="primary" :loading="pinVerifying" @click="handlePinVerify">解锁</el-button>
+        </span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -303,9 +350,13 @@ import {
   setMemoryPrivacy,
   getMemoryEmotionStats,
   mergeMemoryEmotions,
-  updateMemory
+  updateMemory,
+  getMemoryPinStatus,
+  setMemoryPin,
+  verifyMemoryPin
 } from '@/api/memory'
 import { getUserPage } from '@/api/user'
+import { photoUrl } from '@/utils/photo'
 
 const router = useRouter()
 
@@ -332,6 +383,15 @@ const chatVisible = ref(false)
 const privacyVisible = ref(false)
 const privacyLoading = ref(false)
 const privacyForm = reactive({ memoryId: null, privacy: 1 })
+
+// 封存 PIN
+const pinStatus = ref({ hasPin: false, locked: false, unlocked: false })
+const pinSetVisible = ref(false)
+const pinVerifyVisible = ref(false)
+const pinSaving = ref(false)
+const pinVerifying = ref(false)
+const pinForm = reactive({ pin: '', confirm: '' })
+const verifyForm = reactive({ pin: '' })
 
 // 编辑
 const editVisible = ref(false)
@@ -629,9 +689,38 @@ function openPrivacy(row) {
 }
 
 async function handleSetPrivacy() {
+  const target = privacyForm.privacy
+  // 设公开 = 立即发博客（D12）；封存 = 本人也需 PIN（D2）
+  if (target === 0) {
+    try {
+      await ElMessageBox.confirm(
+        '设为公开后会立即投影为博客公开文章，所有人可见。确定继续？',
+        '公开确认',
+        { confirmButtonText: '确认公开', cancelButtonText: '取消', type: 'warning' }
+      )
+    } catch (e) {
+      return
+    }
+  }
+  if (target === 2) {
+    if (!pinStatus.value.hasPin) {
+      ElMessage.warning('请先设置封存 PIN，否则封存后无法再查看')
+      openPinSet()
+      return
+    }
+    try {
+      await ElMessageBox.confirm(
+        '封存后本人也需要输入 PIN 才能查看，AI 永不召回。确定继续？',
+        '封存确认',
+        { confirmButtonText: '确认封存', cancelButtonText: '取消', type: 'warning' }
+      )
+    } catch (e) {
+      return
+    }
+  }
   privacyLoading.value = true
   try {
-    await setMemoryPrivacy(privacyForm.memoryId, privacyForm.privacy)
+    await setMemoryPrivacy(privacyForm.memoryId, target)
     ElMessage.success('隐私设置已更新')
     privacyVisible.value = false
     getList()
@@ -639,6 +728,76 @@ async function handleSetPrivacy() {
     ElMessage.error(e?.message || '设置失败')
   } finally {
     privacyLoading.value = false
+  }
+}
+
+// ============ 封存 PIN ============
+async function loadPinStatus() {
+  try {
+    const res = await getMemoryPinStatus()
+    pinStatus.value = res || { hasPin: false, locked: false, unlocked: false }
+  } catch (e) {
+    pinStatus.value = { hasPin: false, locked: false, unlocked: false }
+  }
+}
+
+function openPinSet() {
+  pinForm.pin = ''
+  pinForm.confirm = ''
+  pinSetVisible.value = true
+}
+
+async function handlePinSet() {
+  const pin = String(pinForm.pin || '').trim()
+  if (!/^\d{4,6}$/.test(pin)) {
+    ElMessage.warning('PIN 需为 4~6 位数字')
+    return
+  }
+  if (pin !== String(pinForm.confirm || '').trim()) {
+    ElMessage.warning('两次输入的 PIN 不一致')
+    return
+  }
+  pinSaving.value = true
+  try {
+    await setMemoryPin(pin)
+    ElMessage.success('PIN 已保存，请重新解锁')
+    // 换 PIN 会吊销旧令牌
+    localStorage.removeItem('sealedToken')
+    pinSetVisible.value = false
+    await loadPinStatus()
+    getList()
+  } catch (e) {
+    ElMessage.error(e?.message || '保存失败')
+  } finally {
+    pinSaving.value = false
+  }
+}
+
+function openPinVerify() {
+  verifyForm.pin = ''
+  pinVerifyVisible.value = true
+}
+
+async function handlePinVerify() {
+  const pin = String(verifyForm.pin || '').trim()
+  if (!/^\d{4,6}$/.test(pin)) {
+    ElMessage.warning('PIN 需为 4~6 位数字')
+    return
+  }
+  pinVerifying.value = true
+  try {
+    const res = await verifyMemoryPin(pin)
+    if (res?.token) {
+      localStorage.setItem('sealedToken', res.token)
+    }
+    pinVerifyVisible.value = false
+    ElMessage.success('已解锁，封存记忆现在可见')
+    await loadPinStatus()
+    getList()
+  } catch (e) {
+    ElMessage.error(e?.message || '解锁失败')
+  } finally {
+    pinVerifying.value = false
   }
 }
 
@@ -720,6 +879,7 @@ async function loadUsers() {
 }
 
 onMounted(() => {
+  loadPinStatus()
   loadStat()
   loadEmotionStats()
   loadUsers()
@@ -966,5 +1126,16 @@ onMounted(() => {
       align-items: center;
     }
   }
+}
+.pin-bar {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.danger-text {
+  color: #f56c6c;
+  font-weight: 600;
 }
 </style>

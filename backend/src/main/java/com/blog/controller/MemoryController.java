@@ -3,26 +3,39 @@ package com.blog.controller;
 import com.blog.common.Result;
 import com.blog.dto.ChatSendDto;
 import com.blog.dto.CondenseDto;
+import com.blog.dto.MemoryFragmentDto;
 import com.blog.dto.MemoryQueryDto;
 import com.blog.dto.MemorySearchDto;
 import com.blog.vo.ChatReplyVo;
 import com.blog.entity.MemoryMessage;
 import com.blog.entity.MemoryNote;
+import com.blog.entity.MemoryPhoto;
+import com.blog.entity.SysUser;
 import com.blog.mapper.MemoryNoteMapper;
+import com.blog.mapper.MemoryPhotoMapper;
+import com.blog.mapper.SysUserMapper;
+import com.blog.security.utils.JwtUtils;
 import com.blog.service.CaptchaService;
-import com.blog.service.MemoryPublishService;
+import com.blog.service.MemoryProjectionService;
 import com.blog.service.impl.MemoryCreateService;
 import com.blog.service.impl.MemoryCoreService;
 import com.blog.service.impl.MemoryEmotionService;
 import com.blog.service.impl.MemoryInsightService;
+import com.blog.service.impl.MemoryPhotoService;
+import com.blog.service.impl.MemoryPinService;
 import com.blog.service.impl.MemoryQueryService;
+import com.blog.service.impl.MemoryVisibilityService;
 import com.blog.security.utils.SecurityUtils;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -40,10 +53,16 @@ public class MemoryController {
     private final MemoryCoreService memoryCoreService;
     private final MemoryQueryService memoryQueryService;
     private final CaptchaService captchaService;
-    private final MemoryPublishService memoryPublishService;
+    private final MemoryProjectionService projectionService;
     private final MemoryEmotionService memoryEmotionService;
     private final MemoryInsightService memoryInsightService;
     private final MemoryNoteMapper memoryNoteMapper;
+    private final MemoryPhotoMapper memoryPhotoMapper;
+    private final MemoryPhotoService memoryPhotoService;
+    private final MemoryPinService memoryPinService;
+    private final MemoryVisibilityService visibilityService;
+    private final SysUserMapper sysUserMapper;
+    private final JwtUtils jwtUtils;
 
     // ==================== 记忆创建 ====================
 
@@ -91,14 +110,19 @@ public class MemoryController {
     public Result<?> chatImg(@RequestParam("memoryId") Long memoryId,
                              @RequestParam("file") MultipartFile file) {
         Long userId = SecurityUtils.getUserId();
-        String imageUrl = memoryCreateService.saveImage(file).url;
+        // 先校验归属，避免为不存在的记忆落一张孤儿照片
+        memoryCoreService.getOwnedNote(userId, memoryId);
+        // 受控存储：图片不落公网，AI 识别走 data URL
+        MemoryPhoto photo = memoryPhotoService.save(file, userId, memoryId, 0);
         String description = "";
         try {
-            description = memoryCoreService.describeImageForMessage(userId, memoryId, imageUrl);
+            description = memoryCoreService.describeImageForMessage(userId, memoryId,
+                    memoryPhotoService.dataUrl(photo));
         } catch (Exception e) {
             log.warn("图片描述失败: {}", e.getMessage());
         }
-        MemoryMessage msg = memoryCoreService.addImageWithReturn(userId, memoryId, imageUrl, description);
+        MemoryMessage msg = memoryCoreService.addImageWithReturn(
+                userId, memoryId, memoryPhotoService.accessUrl(photo), description);
         return Result.success(msg);
     }
 
@@ -250,10 +274,8 @@ public class MemoryController {
         if (note == null) {
             return Result.error(404, "记忆不存在");
         }
-        boolean admin = SecurityUtils.isAdmin();
-        if (!admin && !note.getUserId().equals(current)) {
-            return Result.error(403, "无权访问该记忆");
-        }
+        // 他人只能读公开记忆；封存需 PIN 解锁（统一收口）
+        visibilityService.requireReadable(note, current);
         return Result.success(memoryInsightService.listByMemoryId(note.getUserId(), memoryId));
     }
 
@@ -306,7 +328,7 @@ public class MemoryController {
         if (memoryId == null) {
             return Result.error(400, "memoryId 不能为空");
         }
-        Long articleId = memoryPublishService.publish(memoryId, userId);
+        Long articleId = projectionService.publish(memoryId, userId);
         return Result.success(articleId);
     }
 
@@ -316,7 +338,136 @@ public class MemoryController {
     @GetMapping("/publish-status")
     public Result<?> publishStatus(@RequestParam("memoryId") Long memoryId) {
         Long userId = SecurityUtils.getUserId();
-        return Result.success(memoryPublishService.getPublishedArticleId(memoryId, userId));
+        return Result.success(projectionService.getPublishedArticleId(memoryId, userId));
+    }
+
+    // ==================== 纯文本碎念 / 时光轴 ====================
+
+    /**
+     * 写一条纯文本碎念（不再强制带图）
+     */
+    @PostMapping("/fragment")
+    public Result<?> fragment(@Valid @RequestBody MemoryFragmentDto dto) {
+        Long userId = SecurityUtils.getUserId();
+        return Result.success(memoryCreateService.createFragment(userId, dto));
+    }
+
+    /**
+     * 时光轴：按 finish_time 年月聚合
+     */
+    @GetMapping("/timeline")
+    public Result<?> timeline(@RequestParam(value = "year", required = false) Integer year,
+                              @RequestParam(value = "month", required = false) Integer month) {
+        Long userId = SecurityUtils.getUserId();
+        return Result.success(memoryQueryService.timeline(userId, year, month));
+    }
+
+    /**
+     * 那年今日：按月-日匹配所有年份
+     */
+    @GetMapping("/on-this-day")
+    public Result<?> onThisDay(@RequestParam(value = "date", required = false) String date) {
+        Long userId = SecurityUtils.getUserId();
+        LocalDate day = null;
+        if (StringUtils.isNotBlank(date)) {
+            try {
+                day = LocalDate.parse(date);
+            } catch (Exception e) {
+                return Result.error(400, "date 格式应为 yyyy-MM-dd");
+            }
+        }
+        return Result.success(memoryQueryService.onThisDay(userId, day));
+    }
+
+    // ==================== 封存 PIN ====================
+
+    /** 设置 / 重置封存 PIN（4~6 位数字） */
+    @PostMapping("/pin/set")
+    public Result<?> setPin(@RequestBody Map<String, String> body) {
+        Long userId = SecurityUtils.getUserId();
+        memoryPinService.setPin(userId, body.get("pin"));
+        return Result.success("PIN 已更新");
+    }
+
+    /** 校验 PIN，成功返回 5 分钟解锁令牌 */
+    @PostMapping("/pin/verify")
+    public Result<?> verifyPin(@RequestBody Map<String, String> body) {
+        Long userId = SecurityUtils.getUserId();
+        return Result.success(memoryPinService.verify(userId, body.get("pin")));
+    }
+
+    /** PIN 状态：是否已设置 / 是否锁定 / 当前请求是否已解锁 */
+    @GetMapping("/pin/status")
+    public Result<?> pinStatus() {
+        Long userId = SecurityUtils.getUserId();
+        return Result.success(memoryPinService.status(userId));
+    }
+
+    // ==================== 照片（受控读取） ====================
+
+    /**
+     * 记忆照片读取。
+     * <p>
+     * 该路径在白名单里（&lt;img&gt; 带不了 Authorization 头），由本方法自行鉴权：
+     * public(0) 允许匿名；private(1) 仅本人/管理员；sealed(2) 还需 PIN 解锁令牌。
+     * JWT 可走 header，也可走 {@code ?token=}。
+     */
+    @GetMapping("/photo/{id}")
+    public ResponseEntity<byte[]> photo(@PathVariable Long id,
+                                        @RequestParam(value = "token", required = false) String token) {
+        MemoryPhoto photo = memoryPhotoMapper.selectById(id);
+        if (photo == null) {
+            return ResponseEntity.notFound().build();
+        }
+        MemoryNote note = photo.getMemoryId() == null ? null : memoryNoteMapper.selectById(photo.getMemoryId());
+        Long currentUserId = resolveUserId(token);
+
+        int privacy = note == null || note.getPrivacy() == null
+                ? MemoryVisibilityService.PRIVACY_PRIVATE : note.getPrivacy();
+        if (note == null) {
+            // 找不到所属记忆时，只允许照片上传者本人
+            if (currentUserId == null || !currentUserId.equals(photo.getUserId())) {
+                return ResponseEntity.status(403).build();
+            }
+        } else if (privacy != MemoryVisibilityService.PRIVACY_PUBLIC) {
+            boolean owner = currentUserId != null && currentUserId.equals(note.getUserId());
+            boolean admin = SecurityUtils.isAdmin();
+            if (!owner && !admin) {
+                return ResponseEntity.status(403).build();
+            }
+            if (privacy == MemoryVisibilityService.PRIVACY_SEALED
+                    && !memoryPinService.isUnlocked(note.getUserId())) {
+                return ResponseEntity.status(403).build();
+            }
+        }
+
+        byte[] bytes = memoryPhotoService.readBytes(photo);
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(memoryPhotoService.mimeType(photo)))
+                .body(bytes);
+    }
+
+    /** 图片标签场景下用查询参数里的 JWT 反查用户 */
+    private Long resolveUserId(String token) {
+        Long fromContext = SecurityUtils.getUserId();
+        if (fromContext != null) {
+            return fromContext;
+        }
+        if (StringUtils.isBlank(token)) {
+            return null;
+        }
+        try {
+            if (jwtUtils.isTokenExpired(token)) {
+                return null;
+            }
+            String username = jwtUtils.getUsernameFromToken(token);
+            SysUser user = sysUserMapper.selectOne(
+                    new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<SysUser>()
+                            .eq(SysUser::getUsername, username));
+            return user == null ? null : user.getId();
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     // ==================== 通用防护 ====================

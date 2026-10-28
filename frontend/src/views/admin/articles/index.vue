@@ -60,6 +60,22 @@
         </template>
       </el-table-column>
 
+      <el-table-column label="投影来源" width="130" align="center">
+        <template #default="scope">
+          <el-tooltip v-if="scope.row.needsReview === 1"
+            content="记忆已修改，但这篇文章被人工编辑过，未自动覆盖，待人工合并"
+            placement="top">
+            <el-tag type="danger" size="small">待合并</el-tag>
+          </el-tooltip>
+          <el-tooltip v-else-if="scope.row.sourceMemoryId"
+            content="由拾光记忆投影而来，改记忆会同步本文章"
+            placement="top">
+            <el-tag type="info" size="small">记忆投影</el-tag>
+          </el-tooltip>
+          <span v-else class="text-secondary">-</span>
+        </template>
+      </el-table-column>
+
       <el-table-column label="评论" width="100" align="center">
         <template #default="scope">
           <el-tag :type="scope.row.allowComment === 1 ? 'success' : 'danger'">

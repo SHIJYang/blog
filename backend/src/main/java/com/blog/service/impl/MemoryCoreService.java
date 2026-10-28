@@ -49,6 +49,8 @@ public class MemoryCoreService {
     private final MemoryStatService memoryStatService;
     private final MemoryEmotionService memoryEmotionService;
     private final MemoryInsightService memoryInsightService;
+    private final MemoryVisibilityService visibilityService;
+    private final com.blog.service.MemoryProjectionService projectionService;
 
     /** 封面图描述缓存（memoryId -> AI描述），避免每次对话重复调多模态识别 */
     private final Map<Long, String> coverDescCache = new ConcurrentHashMap<>();
@@ -321,6 +323,8 @@ public class MemoryCoreService {
         }
 
         MemoryNote refreshed = memoryNoteMapper.selectById(memoryId);
+        // D12/D13：公开记忆凝聚出新正文时，投影文章跟着更新
+        projectionService.syncFromNote(refreshed);
         log.info("记忆凝聚完成: userId={}, memoryId={}", userId, memoryId);
         return refreshed;
     }
@@ -388,6 +392,8 @@ public class MemoryCoreService {
         if (!note.getUserId().equals(userId) && !admin) {
             throw new BusinessException(403, "无权访问该记忆");
         }
+        // D2：封存记忆连本人也要先 PIN 解锁，否则对话/凝聚都会泄露内容
+        visibilityService.requireSealedAccess(note);
         return note;
     }
 

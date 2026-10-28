@@ -28,6 +28,10 @@ public class MemoryListVo {
     private Integer status;
     /** 记忆隐私等级：0-公开 1-私密 2-封存 */
     private Integer privacy;
+    /** 记忆类型：1-照片 2-纯文本碎念 3-心境随笔 */
+    private Integer kind;
+    /** 封存时间（privacy=2 时非空） */
+    private LocalDateTime sealedAt;
     /** 聚合情绪标签（逗号分隔） */
     private String emotions;
     /** 对话消息数 */
